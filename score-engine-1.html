@@ -1,0 +1,1058 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SCORE ENGINE — 古典音楽 編曲変換工房</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Yuji+Syuku&family=Noto+Serif+JP:wght@300;400;700&family=Space+Mono:wght@400;700&display=swap');
+:root{
+  --bg:#f2ede2;--bg2:#e9e0cd;--bg3:#ddcfab;--card:#fffdf8;
+  --text:#1c1814;--text2:#3a2f20;--muted:#8a7a5a;--border:#c9b48a;
+  --shadow:0 2px 10px rgba(0,0,0,.08);
+  --brass:#8a5a2b;--brass-l:#c98a45;--brass-bg:#f7ecd9;   /* 真鍮:西洋ポピュラー系 */
+  --teal:#1a5c5c;--teal-l:#2f8f8f;--teal-bg:#e3f2f0;       /* 藍緑:世界の伝統ロジック */
+  --clay:#a03a2e;--clay-l:#c85a4a;--clay-bg:#fbe9e6;       /* 陶:融合の核・警告 */
+  --mid:#1a6a4a;--mid-l:#3a9a70;--mid-bg:#e6f5ee;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;overflow:hidden;}
+body{background:var(--bg);color:var(--text);font-family:'Noto Serif JP',serif;display:flex;flex-direction:column;}
+
+#loginScreen{display:none;position:fixed;inset:0;background:linear-gradient(160deg,#241a10,#3a2712);align-items:center;justify-content:center;padding:20px;z-index:9999;}
+#loginScreen.active{display:flex;}
+.lcard{background:var(--card);border-radius:16px;padding:28px 22px;width:min(360px,100%);box-shadow:0 16px 48px rgba(0,0,0,.35);}
+.llogo{text-align:center;margin-bottom:20px;}
+.lico{font-size:44px;display:block;margin-bottom:8px;}
+.ltitle{font-family:'Yuji Syuku','Noto Serif JP',serif;font-size:22px;color:var(--text);}
+.lsub{font-size:11px;color:var(--muted);margin-top:3px;line-height:1.6;}
+.lfg{margin-bottom:11px;}
+.lfg label{display:block;font-family:'Space Mono',monospace;font-size:10px;letter-spacing:.15em;color:var(--brass);margin-bottom:4px;}
+.lfg input{width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:7px;font-size:15px;outline:none;background:var(--bg);color:var(--text);font-family:inherit;}
+.lfg input:focus{border-color:var(--brass-l);}
+.lerr{color:#c03020;font-size:12px;text-align:center;min-height:16px;margin-top:4px;}
+.lbtn{width:100%;padding:12px;background:linear-gradient(135deg,var(--brass-l),var(--brass));color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;margin-top:4px;font-family:inherit;}
+
+.hd{background:var(--card);border-bottom:2px solid var(--border);padding:8px 14px;display:none;align-items:center;gap:8px;flex-shrink:0;box-shadow:var(--shadow);}
+.hd-title{font-family:'Yuji Syuku','Noto Serif JP',serif;font-size:15px;color:var(--text);flex:1;}
+.hdbtn{background:var(--bg2);border:1px solid var(--border);color:var(--muted);font-size:10px;padding:4px 9px;border-radius:7px;cursor:pointer;font-family:inherit;}
+
+.phase-bar{background:var(--bg2);border-bottom:1px solid var(--border);display:none;flex-shrink:0;overflow-x:auto;}
+.phase-steps{display:flex;min-width:max-content;}
+.pstep{flex-shrink:0;padding:7px 11px;text-align:center;font-family:'Space Mono',monospace;font-size:8px;letter-spacing:.04em;color:var(--muted);border-bottom:2px solid transparent;transition:all .2s;white-space:nowrap;}
+.pstep.active{color:var(--brass);border-bottom-color:var(--brass-l);}
+.pstep.done{color:var(--mid);border-bottom-color:var(--mid-l);}
+.pstep .ps-ico{font-size:12px;display:block;margin-bottom:1px;}
+
+.content{flex:1;overflow-y:auto;display:flex;flex-direction:column;}
+.screen{display:none;}
+.screen.show{display:flex;flex-direction:column;flex:1;}
+.phase-wrap{overflow-y:auto;flex:1;padding:14px;}
+.phase-hd{display:flex;align-items:center;gap:8px;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--border);}
+.phase-hd-ico{font-size:22px;}
+.phase-hd-title{font-family:'Yuji Syuku','Noto Serif JP',serif;font-size:17px;color:var(--text);flex:1;}
+.phase-note{font-size:11px;color:var(--muted);line-height:1.7;margin-bottom:12px;}
+
+#p0{background:linear-gradient(180deg,#f7ecd9,var(--bg));align-items:center;text-align:center;padding:20px 16px 30px;}
+.top-ico{font-size:56px;margin-bottom:12px;filter:drop-shadow(0 4px 12px rgba(138,90,43,.25));}
+.top-title{font-family:'Yuji Syuku','Noto Serif JP',serif;font-size:clamp(22px,6.5vw,30px);color:var(--text);margin-bottom:7px;}
+.top-title span{color:var(--brass-l);}
+.top-sub{font-size:12px;color:var(--text2);line-height:1.8;margin-bottom:18px;max-width:380px;}
+.top-btn{width:100%;max-width:380px;padding:14px;background:linear-gradient(135deg,var(--brass-l),var(--brass));color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;margin-bottom:12px;}
+.top-link{width:100%;max-width:380px;padding:11px;background:var(--card);border:1.5px solid var(--teal-l);color:var(--teal);border-radius:10px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;margin-bottom:20px;text-decoration:none;display:block;}
+.works-box{width:100%;max-width:420px;text-align:left;}
+.works-label{font-family:'Space Mono',monospace;font-size:9px;letter-spacing:.2em;color:var(--brass);margin-bottom:8px;}
+.work-item{background:var(--card);border:1px solid var(--border);border-radius:9px;padding:10px 12px;margin-bottom:7px;cursor:pointer;display:flex;align-items:center;gap:8px;}
+.work-item:active{background:var(--bg2);}
+.wi-title{font-size:13px;font-weight:700;flex:1;}
+.wi-meta{font-size:10px;color:var(--muted);}
+.works-empty{font-size:11px;color:var(--muted);padding:8px 2px;}
+
+.piece-grid{display:flex;flex-direction:column;gap:9px;}
+.piece-card{background:var(--card);border:1.5px solid var(--border);border-radius:11px;padding:12px 13px;cursor:pointer;}
+.piece-card.sel{border-color:var(--brass-l);background:var(--brass-bg);box-shadow:0 0 0 2px rgba(201,138,69,.25);}
+.pc-top{display:flex;align-items:baseline;gap:8px;margin-bottom:5px;}
+.pc-name{font-family:'Yuji Syuku','Noto Serif JP',serif;font-size:16px;}
+.pc-meta{font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);margin-left:auto;}
+.pc-desc{font-size:11.5px;color:var(--text2);line-height:1.7;}
+
+.logic-mode-row{display:flex;gap:8px;margin-bottom:14px;}
+.logic-mode-btn{flex:1;padding:11px;border-radius:9px;border:1.5px solid var(--border);background:var(--card);font-size:12.5px;cursor:pointer;font-family:inherit;color:var(--text2);}
+.logic-mode-btn.sel{border-color:var(--brass-l);background:var(--brass-bg);color:var(--brass);font-weight:700;}
+.logic-grid{display:flex;flex-direction:column;gap:8px;}
+.logic-card{background:var(--card);border:1.5px solid var(--border);border-radius:10px;padding:10px 12px;cursor:pointer;}
+.logic-card.sel-main{border-color:var(--brass-l);background:var(--brass-bg);box-shadow:0 0 0 2px rgba(201,138,69,.25);}
+.logic-card.sel-sub{border-color:var(--teal-l);background:var(--teal-bg);box-shadow:0 0 0 2px rgba(47,143,143,.25);}
+.lc-top{display:flex;align-items:center;gap:7px;margin-bottom:4px;}
+.lc-name{font-size:13.5px;font-weight:700;flex:1;}
+.lc-tag{font-family:'Space Mono',monospace;font-size:8px;padding:2px 7px;border-radius:6px;background:var(--bg2);color:var(--muted);}
+.lc-desc{font-size:11px;color:var(--text2);line-height:1.6;}
+
+.set-group{margin-bottom:16px;}
+.set-label{font-family:'Space Mono',monospace;font-size:9px;letter-spacing:.18em;color:var(--brass);margin-bottom:7px;display:flex;align-items:center;gap:6px;}
+.set-label .jp{font-family:'Noto Serif JP',serif;font-size:12px;font-weight:700;letter-spacing:0;color:var(--text);}
+.chip-row{display:flex;flex-wrap:wrap;gap:6px;}
+.chip{padding:8px 13px;border-radius:9px;border:1.5px solid var(--border);background:var(--card);font-size:12.5px;cursor:pointer;font-family:inherit;color:var(--text2);}
+.chip.sel{border-color:var(--brass-l);background:var(--brass-bg);color:var(--brass);font-weight:700;}
+.sect-toggle{display:flex;align-items:center;gap:9px;padding:9px 11px;background:var(--card);border:1px solid var(--border);border-radius:9px;margin-bottom:6px;}
+.sect-toggle input{width:17px;height:17px;}
+.sect-toggle .st-name{font-size:13px;font-weight:700;flex:1;}
+.sect-toggle .st-note{font-size:10px;color:var(--muted);}
+
+.gen-btn{width:100%;padding:14px;background:linear-gradient(135deg,var(--brass-l),var(--brass));color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;}
+.gen-btn:disabled{opacity:.45;}
+.gen-btn.sub{background:var(--bg2);color:var(--text2);border:1px solid var(--border);font-weight:400;font-size:13px;padding:11px;margin-top:8px;}
+.gen-btn.teal{background:linear-gradient(135deg,var(--teal-l),var(--teal));}
+.prog-note{font-size:11px;color:var(--muted);text-align:center;margin-top:9px;min-height:16px;}
+.spin{display:inline-block;animation:sp 1s linear infinite;}
+@keyframes sp{to{transform:rotate(360deg);}}
+
+.fusion-card{background:var(--clay-bg);border:1px solid var(--clay-l);border-radius:10px;padding:11px 12px;margin-bottom:8px;}
+.fc-cat{font-family:'Space Mono',monospace;font-size:9px;color:var(--clay);letter-spacing:.1em;margin-bottom:4px;}
+.fc-in{width:100%;padding:8px 10px;border:1px solid var(--clay-l);border-radius:7px;font-size:12.5px;background:var(--card);font-family:inherit;outline:none;}
+
+.section-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:10px;}
+.sec-hd{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
+.sec-name{font-family:'Yuji Syuku','Noto Serif JP',serif;font-size:15px;color:var(--brass);flex:1;}
+.sec-logic-badge{font-family:'Space Mono',monospace;font-size:9px;padding:2px 8px;border-radius:6px;}
+.sec-logic-badge.main{background:var(--brass-bg);color:var(--brass);}
+.sec-logic-badge.sub{background:var(--teal-bg);color:var(--teal);}
+.sec-chord{font-size:12px;color:var(--text2);line-height:1.7;background:var(--bg2);border-radius:7px;padding:8px 10px;margin-bottom:8px;}
+.sec-play-row{display:flex;gap:8px;}
+.play-btn{padding:8px 14px;border-radius:8px;border:1px solid var(--brass-l);background:var(--brass-bg);color:var(--brass);font-size:12px;cursor:pointer;font-family:inherit;font-weight:700;}
+.play-btn.playing{background:var(--brass);color:#fff;}
+
+.out-bar{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;}
+.out-btn{padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--card);font-size:11.5px;cursor:pointer;font-family:inherit;color:var(--text2);}
+.out-btn.pri{background:var(--brass);color:#fff;border-color:var(--brass);font-weight:700;}
+.out-btn.teal{background:var(--teal);color:#fff;border-color:var(--teal);font-weight:700;}
+.style-box{background:var(--teal-bg);border:1px solid var(--teal-l);border-radius:9px;padding:11px 12px;margin-bottom:11px;font-size:12.5px;line-height:1.8;color:var(--text2);}
+.style-box .sb-t{font-weight:700;color:var(--teal);margin-bottom:4px;font-family:'Space Mono',monospace;font-size:9px;letter-spacing:.1em;}
+.style-box textarea{width:100%;background:transparent;border:none;font-family:inherit;font-size:13px;color:var(--text2);resize:vertical;outline:none;min-height:44px;}
+.charcount{font-size:10px;color:var(--muted);text-align:right;}
+.charcount.over{color:var(--clay);font-weight:700;}
+
+.nav-row{display:flex;gap:8px;margin-top:16px;}
+.nav-row .back{flex:1;padding:12px;background:var(--bg2);border:1px solid var(--border);border-radius:9px;font-size:13px;cursor:pointer;font-family:inherit;color:var(--text2);}
+.nav-row .next{flex:2;padding:12px;background:linear-gradient(135deg,var(--brass-l),var(--brass));color:#fff;border:none;border-radius:9px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;}
+.nav-row .next:disabled{opacity:.45;}
+</style>
+</head>
+<body>
+
+<div id="loginScreen" class="active">
+  <div class="lcard">
+    <div class="llogo"><span class="lico">🎼</span><div class="ltitle">SCORE ENGINE</div><div class="lsub">古典音楽 編曲変換工房<br>著作権切れの旋律を、別ロジックで着せ替える</div></div>
+    <div class="lfg"><label>MAIL</label><input type="email" id="dEmail" autocomplete="email" placeholder="example@mail.com"></div>
+    <div class="lfg"><label>PASSWORD</label><input type="password" id="dPass" autocomplete="current-password" placeholder="パスワード"></div>
+    <div class="lerr" id="dErr"></div>
+    <button class="lbtn" onclick="doLogin()">🔑 工房に入る（ログイン）</button>
+  </div>
+</div>
+
+<div class="hd" id="appHd">
+  <div class="hd-title">🎼 SCORE ENGINE</div>
+  <button class="hdbtn" onclick="goP(0)">工房口</button>
+  <button class="hdbtn" onclick="doLogout()">退出</button>
+</div>
+
+<div class="phase-bar" id="phaseBar">
+  <div class="phase-steps">
+    <div class="pstep" id="ps1"><span class="ps-ico">🎻</span>原曲</div>
+    <div class="pstep" id="ps2"><span class="ps-ico">🌐</span>ロジック</div>
+    <div class="pstep" id="psFusion"><span class="ps-ico">🔀</span>融合</div>
+    <div class="pstep" id="ps4"><span class="ps-ico">🧩</span>構成</div>
+    <div class="pstep" id="ps5"><span class="ps-ico">🎧</span>生成・試聴</div>
+  </div>
+</div>
+
+<div class="content">
+
+<div class="screen" id="p0">
+  <div class="top-ico">🎼</div>
+  <div class="top-title">古典音楽<span>編曲変換工房</span></div>
+  <div class="top-sub">著作権切れのクラシックの旋律を、<br>ロック・ジャズ・ブルース、あるいは世界各地の<br>伝統音楽ロジックに着せ替える。</div>
+  <button class="top-btn" onclick="startNew()">🎼 新しい編曲をこしらえる</button>
+  <a class="top-link" href="https://heartshouseinc-tech.github.io/SYOUSETSU/" target="_blank">📖 歌詞のもとを作る（MYTH ENGINEへ）</a>
+  <div class="works-box">
+    <div class="works-label">━ 書き溜めた編曲 ━</div>
+    <div id="worksList"><div class="works-empty">読み込み中…</div></div>
+  </div>
+</div>
+
+<div class="screen" id="p1">
+  <div class="phase-wrap">
+    <div class="phase-hd"><span class="phase-hd-ico">🎻</span><span class="phase-hd-title">原曲を選ぶ</span></div>
+    <div class="phase-note">収録した主題は代表的な旋律動機を簡略化したものです（正確な採譜ではなく、着せ替えのための素材です）。</div>
+    <div class="piece-grid" id="pieceGrid"></div>
+    <div class="set-group" style="margin-top:16px;">
+      <button class="logic-mode-btn" id="btnMixToggle" style="width:100%;" onclick="toggleMixPiece()">＋ 別の原曲を重ねる（任意・同時ミックス）</button>
+      <div id="mixPieceArea" style="display:none;margin-top:10px;">
+        <div class="phase-note">選んだ曲を、下の低い声部（対旋律）として同時に重ねます。全曲8音構成なので、フレーズの周期はぴったり揃います。</div>
+        <div class="piece-grid" id="mixPieceGrid"></div>
+        <div class="set-label" style="margin-top:10px;">MIX LEVEL <span class="jp">重ねる強さ</span></div>
+        <div class="chip-row" id="rowMixLevel"></div>
+      </div>
+    </div>
+    <div class="nav-row"><button class="back" onclick="goP(0)">← 工房口へ</button><button class="next" id="p1Next" disabled onclick="goP(2)">ロジックへ →</button></div>
+  </div>
+</div>
+
+<div class="screen" id="p2">
+  <div class="phase-wrap">
+    <div class="phase-hd"><span class="phase-hd-ico">🌐</span><span class="phase-hd-title">ロジックを選ぶ</span></div>
+    <div class="logic-mode-row">
+      <button class="logic-mode-btn sel" id="btnModeSingle" onclick="setLogicMode('single')">単一ロジック</button>
+      <button class="logic-mode-btn" id="btnModeFusion" onclick="setLogicMode('fusion')">フュージョン（2つ選ぶ）</button>
+    </div>
+    <div class="phase-note" id="logicModeNote">1つだけ選んでください。</div>
+    <div class="works-label">🎸 西洋ポピュラー系</div>
+    <div class="logic-grid" id="logicGridPop"></div>
+    <div class="works-label" style="margin-top:14px;">🌍 世界の伝統ロジック</div>
+    <div class="logic-grid" id="logicGridWorld"></div>
+    <div class="works-label" style="margin-top:14px;">📜 保存</div>
+    <div class="logic-grid" id="logicGridPreserve"></div>
+    <div class="nav-row"><button class="back" onclick="goP(1)">← 原曲へ</button><button class="next" id="p2Next" disabled onclick="goAfterLogic()">次へ →</button></div>
+  </div>
+</div>
+
+<div class="screen" id="pFusion">
+  <div class="phase-wrap">
+    <div class="phase-hd"><span class="phase-hd-ico">🔀</span><span class="phase-hd-title">融合の核を固める</span></div>
+    <div class="phase-note">主ロジックと副ロジックの配合比率・調・テンポを最初に一つだけ確定します。セクションごとに主／副どちらのロジックで鳴らすかは、この比率に応じて自動で振り分けられます。</div>
+    <button class="gen-btn" id="btnFusion" onclick="genFusion()">🔀 融合の核をAIに組ませる</button>
+    <div id="fusionBox"></div>
+    <div class="prog-note" id="fusionNote"></div>
+    <button class="gen-btn sub" id="btnReFusion" onclick="genFusion()" style="display:none;">🔁 組み直す</button>
+    <div class="nav-row"><button class="back" onclick="goP(2)">← ロジックへ</button><button class="next" id="fusionNext" disabled onclick="goP(4)">構成へ →</button></div>
+  </div>
+</div>
+
+<div class="screen" id="p4">
+  <div class="phase-wrap">
+    <div class="phase-hd"><span class="phase-hd-ico">🧩</span><span class="phase-hd-title">構成・書き出し設定</span></div>
+    <div class="set-group"><div class="set-label">STRUCTURE <span class="jp">使うセクション</span></div>
+      <div id="sectionToggles"></div></div>
+    <div class="set-group"><div class="set-label">1/f <span class="jp">1/fゆらぎ（自然な揺らぎを与える作曲技法）</span></div>
+      <div class="chip-row" id="rowFluctuation"></div></div>
+    <div class="nav-row"><button class="back" onclick="goBackFromP4()">← 戻る</button><button class="next" onclick="goP5()">生成・試聴へ →</button></div>
+  </div>
+</div>
+
+<div class="screen" id="p5">
+  <div class="phase-wrap">
+    <div class="phase-hd"><span class="phase-hd-ico">🎧</span><span class="phase-hd-title" id="outTitle">生成・試聴</span></div>
+    <div class="out-bar">
+      <button class="out-btn pri" onclick="genChordChart()">🎵 コード進行表を組む</button>
+      <button class="out-btn teal" onclick="genSunoStyle()">🏷 Suno用スタイル文を組む</button>
+    </div>
+    <div class="prog-note" id="chartNote"></div>
+    <div id="sectionsView"></div>
+    <div class="style-box" id="styleBox" style="display:none;">
+      <div class="sb-t">🏷 SUNOスタイル文（コピーしてスタイル欄へ）</div>
+      <textarea id="styleText" readonly></textarea>
+      <div class="charcount" id="styleCount"></div>
+    </div>
+    <div class="out-bar">
+      <button class="out-btn" onclick="copyStyle()">📋 スタイル文コピー</button>
+      <button class="out-btn pri" id="btnExportWav" onclick="exportWav()">⬇️ 試聴音をWAV書き出し（〜60秒）</button>
+      <button class="out-btn" onclick="saveWork()">💾 保存</button>
+      <a class="out-btn" href="https://heartshouseinc-tech.github.io/SYOUSETSU/" target="_blank">📖 歌詞のもとを作る</a>
+    </div>
+    <div class="prog-note" id="exportNote"></div>
+    <div class="nav-row"><button class="back" onclick="goP(4)">← 構成へ</button><button class="next" onclick="goP(0)">工房口へ戻る</button></div>
+  </div>
+</div>
+
+</div>
+
+<script>
+// ══════════════════════════════════════════════
+// SCORE ENGINE v1 — 古典音楽 編曲変換工房
+// RAKUGO/MYTH ENGINE系アーキテクチャ流用（askAI + Firestore + Web Audio）
+// ══════════════════════════════════════════════
+
+var FUNC_BASE=(location.hostname==='localhost'||location.hostname==='127.0.0.1')
+  ?'http://localhost:5001/kensetsu-nippo-842a2/us-central1'
+  :'https://us-central1-kensetsu-nippo-842a2.cloudfunctions.net';
+var ACCESS_KEY='HeartsHouse2026Key';
+
+// ══════ 音楽理論ユーティリティ ══════
+var NOTE_INDEX={C:0,'C#':1,Db:1,D:2,'D#':3,Eb:3,E:4,F:5,'F#':6,Gb:6,G:7,'G#':8,Ab:8,A:9,'A#':10,Bb:10,B:11};
+function noteToMidi(name){ var m=name.match(/^([A-G][#b]?)(\d)$/); if(!m) return 60; return (parseInt(m[2],10)+1)*12+NOTE_INDEX[m[1]]; }
+function midiToFreq(midi){ return 440*Math.pow(2,(midi-69)/12); }
+var MAJOR_STEPS=[0,2,4,5,7,9,11];
+var MINOR_STEPS=[0,2,3,5,7,8,10];
+function remapNote(noteName,tonicPC,mode,targetSteps){
+  var midi=noteToMidi(noteName);
+  var origSteps=mode==='minor'?MINOR_STEPS:MAJOR_STEPS;
+  var diff=((midi%12)-tonicPC+12)%12;
+  var idx=origSteps.indexOf(diff);
+  if(idx<0){
+    // 経過的な半音は「そのまま残す」と後で浮いて不協和になるため、最も近い音階度数にスナップする
+    var best=0,bestDist=99;
+    for(var k=0;k<origSteps.length;k++){
+      var d=Math.min(Math.abs(origSteps[k]-diff),12-Math.abs(origSteps[k]-diff));
+      if(d<bestDist){ bestDist=d; best=k; }
+    }
+    idx=best;
+  }
+  var newOffset=targetSteps[idx%targetSteps.length];
+  return midi+(newOffset-diff);
+}
+
+// ══════ 原曲ライブラリ(v1:10曲) ══════
+var PIECES=[
+ {id:'bach_air',name:'G線上のアリア',composer:'J.S.バッハ',era:'バロック',tonic:'D',mode:'major',tempo:66,meter:4,
+  notes:['D4','C#4','B3','Bb3','A3','G3','F#3','E3'],
+  harmony:'I - V6/5 - vi - iii - IV - I6/4 - IV - V（半音階的下降ベースによる進行）',
+  ara:'半音階的に下降するベースラインの上に、伸びやかな旋律が乗る。パッサカリア風の進行が編曲の土台として強い。'},
+ {id:'pachelbel_canon',name:'カノン',composer:'パッヘルベル',era:'バロック',tonic:'D',mode:'major',tempo:96,meter:4,
+  notes:['D3','A2','B2','F#2','G2','D2','G2','A2'],
+  harmony:'I - V - vi - iii - IV - I - IV - V（パッヘルベルのカノン進行そのもの）',
+  ara:'あらゆるポップスに転用される定番進行。汎用性が非常に高く、どんなロジックにも乗りやすい。'},
+ {id:'vivaldi_spring',name:'四季・春　第1楽章主題',composer:'ヴィヴァルディ',era:'バロック',tonic:'E',mode:'major',tempo:120,meter:4,
+  notes:['E4','G#4','B4','G#4','E4','G#4','B4','A4'],
+  harmony:'I - V - I - IV - V - I（バロック的な長調の明快な進行）',
+  ara:'分散和音による明るく躍動的な主題。リトルネロ形式の反復構造が編曲の骨格に使いやすい。'},
+ {id:'beethoven_ode',name:'歓喜の歌（第九）',composer:'ベートーヴェン',era:'古典派',tonic:'D',mode:'major',tempo:120,meter:4,
+  notes:['E4','E4','F4','G4','G4','F4','E4','D4'],
+  harmony:'I - IV - I - V - I（単純な階段状主題を支える進行）',
+  ara:'階段状に上下するだけの単純な旋律。あらゆる編曲でも輪郭が潰れない、最強の汎用主題。'},
+ {id:'mozart_eine',name:'アイネ・クライネ・ナハトムジーク　第1楽章主題',composer:'モーツァルト',era:'古典派',tonic:'G',mode:'major',tempo:132,meter:4,
+  notes:['G3','D4','G4','B4','D5','B4','G4','D4'],
+  harmony:'I - V - I - V - I（分散和音による主和音・属和音の往復）',
+  ara:'分散和音の軽快な骨格。跳躍の大きさが編曲時のダイナミクスとして活きる。'},
+ {id:'beethoven_elise',name:'エリーゼのために',composer:'ベートーヴェン',era:'古典派',tonic:'A',mode:'minor',tempo:100,meter:3,
+  notes:['E5','D#5','E5','D#5','E5','B4','D5','C5'],
+  harmony:'i - V - i - VII - III - i（イ短調、半音階的な主題）',
+  ara:'E-D#の交代が印象的な主題。短調の陰影が、ダーク寄りの編曲との相性を良くする。'},
+ {id:'dvorak_newworld',name:'新世界より　第2楽章（家路）',composer:'ドヴォルザーク',era:'ロマン派',tonic:'D',mode:'major',tempo:60,meter:4,
+  notes:['D4','D4','B3','A3','G3','A3','B3','D4'],
+  harmony:'I - vi - IV - I（五音音階的で牧歌的な循環進行）',
+  ara:'五音音階的な旋律で、日本や世界の伝統ロジックへの変換実験に特に向く。'},
+ {id:'brahms_lullaby',name:'子守歌',composer:'ブラームス',era:'ロマン派',tonic:'E',mode:'major',tempo:66,meter:3,
+  notes:['E4','E4','G4','G4','A4','G4','F#4','E4'],
+  harmony:'I - IV - I - V - I（シンプルな循環進行）',
+  ara:'素朴な子守歌のロッキング（揺れる）モーション。テンポ変換の実験に向く。'},
+ {id:'grieg_morning',name:'朝（ペール・ギュント）',composer:'グリーグ',era:'ロマン派',tonic:'E',mode:'major',tempo:66,meter:4,
+  notes:['E4','F#4','G#4','B4','G#4','F#4','E4','B3'],
+  harmony:'I - IV - I - V - I（牧歌的な長調進行）',
+  ara:'ゆったり上下する牧歌的主題。モーダルな響きへの寄せ替えがしやすい。'},
+ {id:'auldlangsyne',name:'蛍の光（オールド・ラング・サイン）',composer:'スコットランド民謡',era:'民謡',tonic:'F',mode:'major',tempo:76,meter:4,
+  notes:['C4','C4','F4','A4','G4','F4','A4','G4'],
+  harmony:'I - IV - I - V - I（五音音階民謡に典型的な循環進行）',
+  ara:'五音音階の民謡旋律。世界のどの伝統ロジックにも比較的乗りやすい基準曲。'}
+];
+
+// ══════ ロジックライブラリ(v1:西洋ポピュラー5+世界の伝統7+保存1=13) ══════
+var LOGICS={
+  rock:{name:'ロック型',category:'pop',desc:'ストレートな8ビート、パワーコード的な骨太さ。',scale:'orig',meterSteps:8,swing:0,
+    kick:[1,0,0,0,1,0,0,0],snare:[0,0,1,0,0,0,1,0],hat:[1,1,1,1,1,1,1,1],
+    suno:'driving rock, electric guitars, powerful drums, energetic'},
+  blues12:{name:'ブルース型（12小節進行）',category:'pop',desc:'ブルース・ヘクサトニックとシャッフル感。',scale:[0,3,5,6,7,10],meterSteps:8,swing:0.62,
+    kick:[1,0,0,1,0,0,1,0],snare:[0,0,1,0,0,0,1,0],hat:[1,0,1,0,1,0,1,0],
+    suno:'blues, 12 bar shuffle, gritty guitar, walking bass, soulful vocals'},
+  jazz_iivi:{name:'ジャズ型（ii-V-I）',category:'pop',desc:'スウィングとブラシドラム、ii-V-Iの再和声化。',scale:'orig',meterSteps:8,swing:0.66,
+    kick:[1,0,0,0,0,0,0,0],snare:[0,0,0,0,1,0,0,0],hat:[1,0,1,1,1,0,1,1],
+    suno:'jazz, swing, walking bass, brushed drums, smoky vocals'},
+  bossa:{name:'ボサノヴァ型',category:'pop',desc:'シンコペーションの効いた柔らかいリズム。',scale:'orig',meterSteps:8,swing:0,
+    kick:[1,0,0,1,0,0,1,0],snare:[0,1,0,0,1,0,0,1],hat:[1,0,1,0,1,0,1,0],
+    suno:'bossa nova, nylon guitar, soft percussion, breathy vocals'},
+  doowop:{name:'ドゥーワップ型（I-vi-IV-V）',category:'pop',desc:'1950年代風のトリプレット・シャッフル。',scale:'orig',meterSteps:8,swing:0.6,
+    kick:[1,0,0,0,1,0,0,0],snare:[0,0,0,0,1,0,0,0],hat:[1,1,1,1,1,1,1,1],
+    suno:'doo-wop, 1950s, warm vocal harmonies, walking bass, brushed drums'},
+  africa_poly:{name:'西アフリカ系ポリリズム型',category:'world',desc:'12/8のクロスリズム・ベル/クラップの交錯。西アフリカの太鼓伝統に着想。',scale:'pentatonic',meterSteps:12,swing:0,
+    kick:[1,0,0,1,0,1,0,0,1,0,1,0],snare:[0,0,1,0,0,0,1,0,0,1,0,0],hat:[1,0,1,0,1,0,1,0,1,0,1,0],
+    suno:'west african inspired, polyrhythmic percussion, call and response, 12/8 groove'},
+  mideast_maqam:{name:'中東マカーム型',category:'world',desc:'増2度を含む音階（近似）とダラブッカ風の"ドゥム・タク"リズム。',scale:[0,1,4,5,7,8,10],meterSteps:8,swing:0,
+    kick:[1,0,0,1,0,0,1,0],snare:[0,0,1,0,1,0,0,1],hat:[1,1,0,1,1,0,1,1],
+    suno:'middle eastern inspired, maqam scale, darbuka percussion, oud-like strings'},
+  hindustani_raga:{name:'北インド・ラーガ型',category:'world',desc:'厳密なラーガ文法ではなく、雰囲気を近似した音階。簡略化したターラ風リズム。',scale:[0,1,4,5,7,8,11],meterSteps:8,swing:0,
+    kick:[1,0,0,1,0,0,1,0],snare:[0,0,1,0,0,1,0,1],hat:[1,0,1,0,1,0,1,0],
+    suno:'hindustani inspired, raga-like scale, tabla-style percussion, drone texture'},
+  japan_yo:{name:'日本陽旋法型',category:'world',desc:'陽旋法（ド・レ・ファ・ソ・ラ相当）と太鼓風のアクセント。',scale:[0,2,5,7,9],meterSteps:8,swing:0,
+    kick:[1,0,0,0,1,0,0,0],snare:[0,0,0,0,0,0,0,0],hat:[0,0,1,0,0,0,1,0],
+    suno:'japanese traditional inspired, yo scale, taiko accents, shamisen-like texture'},
+  gamelan:{name:'ジャワ・ガムラン型（ペロッグ/スレンドロ近似）',category:'world',desc:'西洋十二平均律による近似（実際のガムラン音律とは異なる）。インターロッキングする鍵盤打楽器風。',scale:[0,2,5,7,9],meterSteps:8,swing:0,
+    kick:[1,0,1,0,1,0,1,0],snare:[0,0,0,0,0,0,0,0],hat:[1,0,0,1,0,1,0,0],
+    suno:'gamelan inspired, metallophone textures, interlocking mallets, gong resonance'},
+  balkan:{name:'バルカン変拍子型',category:'world',desc:'ハーモニックマイナーと7拍子系（3+2+2）のグルーヴ。',scale:[0,2,3,5,7,8,11],meterSteps:7,swing:0,
+    kick:[1,0,0,1,0,1,0],snare:[0,0,1,0,0,0,1],hat:[1,1,1,1,1,1,1],
+    suno:'balkan folk inspired, odd time signature 7/8, brass ensemble, driving energy'},
+  celtic:{name:'ケルト民謡型',category:'world',desc:'ドリア旋法と6/8のジグのリズム。',scale:[0,2,3,5,7,9,10],meterSteps:6,swing:0,
+    kick:[1,0,0,1,0,0],snare:[0,0,1,0,0,1],hat:[1,1,1,1,1,1],
+    suno:'celtic folk inspired, dorian mode, fiddle and whistle, jig rhythm 6/8'},
+  preserve:{name:'原曲保存モード',category:'preserve',desc:'和声・旋法はそのまま、音色だけ現代化。',scale:'orig',meterSteps:8,swing:0,
+    kick:[],snare:[],hat:[],
+    suno:'chamber ensemble, modern production, faithful to the original harmony'}
+};
+function scaleStepsFor(logicKey, piece){
+  var l=LOGICS[logicKey];
+  if(l.scale==='orig') return piece.mode==='minor'?MINOR_STEPS:MAJOR_STEPS;
+  if(l.scale==='pentatonic') return piece.mode==='minor'?[0,3,5,7,10]:[0,2,4,7,9];
+  return l.scale;
+}
+
+// ══════ 曲構成セクション ══════
+var SECTION_DEFS=[
+  {key:'intro',name:'イントロ',note:'控えめに、旋律のみ'},
+  {key:'a',name:'Aメロ',note:'旋律＋リズム'},
+  {key:'b',name:'Bメロ',note:'展開・変化'},
+  {key:'c',name:'Cメロ（任意）',note:'必須ではない'},
+  {key:'sabi',name:'サビ',note:'一番盛り上がる'},
+  {key:'outro',name:'アウトロ',note:'フェード気味に'}
+];
+var FLUCT_OPTS=['なし','あり（1/fゆらぎ）'];
+
+// ══════ State ══════
+var cu=null,busy=false;
+var selPiece=null;
+var secondPiece=null; // 同時に重ねる別の原曲(任意)
+var mixLevel=0.5; // 重ねる強さ(ゲイン比)
+var logicMode='single'; // single | fusion
+var mainLogic=null, subLogic=null;
+var fusionCore=null; // {key,tempo_bpm,meter,main_ratio,sub_ratio,blend_description}
+var sectionsOn={intro:true,a:true,b:true,c:false,sabi:true,outro:true};
+var fluctuation='なし';
+var chordChart=null; // {sections:[{section_name,roman_numerals,description}]}
+var sunoStyle='';
+var workId=null;
+var audioCtx=null;
+var currentPlayingKey=null;
+
+// ══════ API ══════
+async function callAI(prompt,schema){
+  var body={prompt:prompt,model:'gemini-2.5-flash'};
+  if(schema) body.responseSchema=schema;
+  var r=await fetch(FUNC_BASE+'/askAI',{method:'POST',headers:{'Content-Type':'application/json','x-access-key':ACCESS_KEY},body:JSON.stringify(body)});
+  if(!r.ok) throw new Error('API '+r.status);
+  var d=await r.json();
+  if(d&&d.success===false) throw new Error(d.error||'APIエラー');
+  return (d&&d.data&&d.data.candidates&&d.data.candidates[0]&&d.data.candidates[0].content&&d.data.candidates[0].content.parts&&d.data.candidates[0].content.parts[0]&&d.data.candidates[0].content.parts[0].text)
+    ||(d&&d.data&&d.data.text)
+    ||(d&&d.candidates&&d.candidates[0]&&d.candidates[0].content&&d.candidates[0].content.parts&&d.candidates[0].content.parts[0]&&d.candidates[0].content.parts[0].text)
+    ||(d&&d.text)||'';
+}
+async function callJSON(prompt,schema){
+  var raw=await callAI(prompt,schema);
+  try{ return JSON.parse(String(raw).replace(/```json|```/g,'').trim()); }
+  catch(e){ return null; }
+}
+function sanitizeRunaway(text){
+  if(!text) return text;
+  var m=text.match(/(.{1,6}?)\1{9,}/);
+  if(!m) return text;
+  var idx=text.indexOf(m[0]);
+  return text.slice(0,idx).replace(/[\s、。！？」』\)\]]*$/,'');
+}
+async function callJSONRetry(prompt,schema,minKey,minLen){
+  var antiRepeat='\n\n※厳守：同じ文字・語句・記号を連続して繰り返し書かないこと。JSONを書き終えたらそこで筆を置くこと。';
+  var best=null;
+  for(var attempt=0;attempt<3;attempt++){
+    var obj=await callJSON(attempt===0?prompt:prompt+antiRepeat,schema);
+    if(obj){
+      if(minKey&&typeof obj[minKey]==='string'){
+        obj[minKey]=sanitizeRunaway(obj[minKey]);
+        if(obj[minKey]&&obj[minKey].length>=(minLen||20)) return obj;
+        if(!best||((obj[minKey]||'').length>((best[minKey]||'').length))) best=obj;
+      }else{ return obj; }
+    }
+  }
+  return best;
+}
+
+// ══════ SCHEMAS ══════
+var SCHEMA_FUSION={type:'OBJECT',properties:{
+  key:{type:'STRING'},tempo_bpm:{type:'INTEGER'},meter:{type:'STRING'},
+  main_ratio:{type:'INTEGER'},sub_ratio:{type:'INTEGER'},blend_description:{type:'STRING'}
+},required:['key','tempo_bpm','main_ratio','sub_ratio','blend_description']};
+
+var SCHEMA_CHORDCHART={type:'OBJECT',properties:{
+  sections:{type:'ARRAY',items:{type:'OBJECT',properties:{
+    section_key:{type:'STRING'},roman_numerals:{type:'STRING'},description:{type:'STRING'}
+  },required:['section_key','roman_numerals','description']}}
+},required:['sections']};
+
+var SCHEMA_SUNOSTYLE={type:'OBJECT',properties:{
+  style_text:{type:'STRING'}
+},required:['style_text']};
+
+// ══════ PROMPTS ══════
+function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function activeSections(){ return SECTION_DEFS.filter(function(s){ return sectionsOn[s.key]; }); }
+function isFusion(){ return logicMode==='fusion' && mainLogic && subLogic; }
+function commonHead(){
+  var h='【原曲】'+selPiece.name+'（'+selPiece.composer+'／'+selPiece.era+'）\n調：'+selPiece.tonic+(selPiece.mode==='minor'?'マイナー':'メジャー')+'／原テンポ：'+selPiece.tempo+'BPM\n原和声骨格：'+selPiece.harmony+'\n';
+  if(secondPiece){
+    h+='【重ねる原曲】'+secondPiece.name+'（'+secondPiece.composer+'）を対旋律として同時に重ねる（重ねる強さ：'+Math.round(mixLevel*100)+'%）\n';
+  }
+  if(isFusion()){
+    h+='【ロジック】フュージョン：主＝'+LOGICS[mainLogic].name+'（'+LOGICS[mainLogic].desc+'）／副＝'+LOGICS[subLogic].name+'（'+LOGICS[subLogic].desc+'）\n両ロジックは切り替えではなく、常に同時に重なって鳴る（比率は音量バランス）。\n';
+    if(fusionCore) h+='【融合の核】調：'+fusionCore.key+'／テンポ：'+fusionCore.tempo_bpm+'BPM／主副の音量比：'+fusionCore.main_ratio+':'+fusionCore.sub_ratio+'／'+fusionCore.blend_description+'\n';
+  }else{
+    h+='【ロジック】'+LOGICS[mainLogic].name+'（'+LOGICS[mainLogic].desc+'）\n';
+  }
+  return h;
+}
+function fusionPrompt(){
+  return 'あなたは編曲設計AIです。2つの音楽ロジックを"同時に重ねて"鳴らす際の核（調・テンポ・音量バランス）を一つだけ確定してください。セクションごとに切り替えるのではなく、常に両方が同時に鳴ることが前提です。以降のすべてのセクションはこれと矛盾しないように書かれます。\n\n'
+    +commonHead()
+    +'\n【指示】\n・key：この編曲全体の調を決める（原調のままでも移調でもよい）。\n・tempo_bpm：全体のテンポ（整数、両ロジックが同時に噛み合うテンポにする）。\n・main_ratio/sub_ratio：主ロジックと副ロジックの音量バランス（合計100になる整数）。\n'
+    +'・blend_description：ロック的な要素とジャズ的な要素などが具体的にどう同時に重なり合うか（例：ロックのビートの上にジャズのコード変化が乗る、等）を2〜3行で。\n・JSONのみ返答。';
+}
+function chordChartPrompt(){
+  var secs=activeSections();
+  var secText=secs.map(function(s){return s.key+'：'+s.name;}).join('\n');
+  return 'あなたは編曲家AIです。原曲の和声骨格を、指定のロジックで各セクションごとにどう再和声化するかのコード進行表を作ってください。\n\n'
+    +commonHead()
+    +'\n【使用するセクション】\n'+secText
+    +'\n\n【指示】\n・各セクションについて、section_key・ローマ数字進行(roman_numerals)・その進行を選んだ理由や響きの説明(description、40字程度)を書く。\n'
+    +(isFusion()?'・主ロジックと副ロジックが同時に重なった響きとしてどちらの語法も感じられるように書く（切り替えではなく共存）。\n':'')
+    +(secondPiece?'・重ねた原曲の旋律が対旋律としてどう絡むかにも触れる。\n':'')
+    +'・全セクションを通して調性的な一貫性を保つこと。\n・JSONのみ返答。';
+}
+function sunoStylePrompt(){
+  return 'あなたはSuno AI用のスタイルプロンプト作成AIです。以下の編曲内容を、Sunoのスタイル欄（200文字以内、ジャンル→ムード→楽器→ボーカル→制作感の順のカンマ区切りタグ）に収まる形で書いてください。\n\n'
+    +commonHead()
+    +'\n【指示】\n・200文字以内厳守。日本語ではなく英語のタグで書く（Sunoは英語タグの方が安定するため）。\n・ジャンル→ムード→楽器→ボーカル→制作感の順で、カンマ区切り。\n・BPMと調も含めてよい。\n・JSONのstyle_textフィールドのみに書く。他の説明は不要。';
+}
+
+// ══════ PHASE NAV ══════
+function goP(n){
+  document.getElementById('pFusion').classList.remove('show');
+  var psf=document.getElementById('psFusion');
+  psf.classList.remove('active');
+  if(n>=4) psf.classList.add('done'); else psf.classList.remove('done');
+  for(var i=0;i<=5;i++){
+    var el=document.getElementById('p'+i);
+    if(el) el.classList.remove('show');
+    var ps=document.getElementById('ps'+i);
+    if(ps){ ps.classList.remove('active','done'); if(i===n) ps.classList.add('active'); else if(i<n&&i>=1) ps.classList.add('done'); }
+  }
+  var t=document.getElementById('p'+n);
+  if(t) t.classList.add('show');
+  if(n===0) loadWorks();
+}
+function showFusion(){
+  for(var i=0;i<=5;i++){
+    var el=document.getElementById('p'+i); if(el) el.classList.remove('show');
+    var ps=document.getElementById('ps'+i); if(ps) ps.classList.remove('active');
+  }
+  document.getElementById('psFusion').classList.remove('done');
+  document.getElementById('psFusion').classList.add('active');
+  document.getElementById('pFusion').classList.add('show');
+}
+function goAfterLogic(){
+  if(isFusion()){
+    fusionCore=null;
+    document.getElementById('fusionBox').innerHTML='';
+    document.getElementById('fusionNote').textContent='';
+    document.getElementById('btnFusion').style.display='block';
+    document.getElementById('btnReFusion').style.display='none';
+    document.getElementById('fusionNext').disabled=true;
+    showFusion();
+  }else{
+    goP(4);
+  }
+}
+function goBackFromP4(){
+  if(isFusion()){ showFusion(); } else { goP(2); }
+}
+
+// ══════ AUTH ══════
+function initAuth(){
+  if(!window.__fw){ window.addEventListener('fbReady',initAuth,{once:true}); return; }
+  window.__fw.onAuthStateChanged(window.__fw.auth,function(user){
+    if(user){ cu=user; document.getElementById('loginScreen').classList.remove('active'); document.getElementById('appHd').style.display='flex'; document.getElementById('phaseBar').style.display='block'; goP(0); }
+    else { cu=null; document.getElementById('loginScreen').classList.add('active'); document.getElementById('appHd').style.display='none'; document.getElementById('phaseBar').style.display='none'; }
+  });
+}
+async function doLogin(){
+  var em=document.getElementById('dEmail').value.trim(),pw=document.getElementById('dPass').value;
+  var err=document.getElementById('dErr'); err.textContent='';
+  try{ await window.__fw.signInWithEmailAndPassword(window.__fw.auth,em,pw); }
+  catch(e){ err.textContent='ログインできません。メールとパスワードをご確認ください。'; }
+}
+async function doLogout(){ if(!confirm('退出しますか？'))return; await window.__fw.signOut(window.__fw.auth); }
+
+// ══════ P0 保存済み一覧 ══════
+async function loadWorks(){
+  var box=document.getElementById('worksList');
+  if(!cu||!window.__fw){ box.innerHTML='<div class="works-empty">—</div>'; return; }
+  try{
+    var fw=window.__fw;
+    var snap=await fw.getDocs(fw.query(fw.collection(fw.db,'score_engine/'+cu.uid+'/works'),fw.orderBy('updatedAt','desc')));
+    if(snap.empty){ box.innerHTML='<div class="works-empty">まだ編曲はありません。上のボタンから始めてください。</div>'; return; }
+    var html='';
+    snap.forEach(function(docu){
+      var w=docu.data();
+      html+='<div class="work-item" onclick="loadWork(\''+docu.id+'\')"><span>🎼</span><span class="wi-title">'+esc(w.pieceName||'（無題）')+'</span><span class="wi-meta">'+esc(w.logicLabel||'')+'</span></div>';
+    });
+    box.innerHTML=html;
+  }catch(e){ box.innerHTML='<div class="works-empty">読み込みに失敗しました。</div>'; }
+}
+async function loadWork(id){
+  try{
+    var fw=window.__fw;
+    var d=await fw.getDoc(fw.doc(fw.db,'score_engine/'+cu.uid+'/works/'+id));
+    if(!d.exists()) return;
+    var w=d.data();
+    workId=id;
+    selPiece=PIECES.filter(function(p){return p.id===w.pieceId;})[0]||PIECES[0];
+    secondPiece=w.secondPieceId?(PIECES.filter(function(p){return p.id===w.secondPieceId;})[0]||null):null;
+    mixLevel=w.mixLevel||0.5;
+    logicMode=w.logicMode||'single'; mainLogic=w.mainLogic||null; subLogic=w.subLogic||null;
+    fusionCore=w.fusionCore||null;
+    sectionsOn=w.sectionsOn||sectionsOn; fluctuation=w.fluctuation||'なし';
+    chordChart=w.chordChart||null; sunoStyle=w.sunoStyle||'';
+    renderSectionsView();
+    if(sunoStyle){ document.getElementById('styleBox').style.display='block'; document.getElementById('styleText').value=sunoStyle; updateStyleCount(); }
+    goP(5);
+  }catch(e){ alert('読み込みに失敗しました。'); }
+}
+function startNew(){
+  selPiece=null;secondPiece=null;mixLevel=0.5;logicMode='single';mainLogic=null;subLogic=null;fusionCore=null;
+  sectionsOn={intro:true,a:true,b:true,c:false,sabi:true,outro:true};fluctuation='なし';
+  chordChart=null;sunoStyle='';workId=null;
+  renderPieceGrid();
+  var area=document.getElementById('mixPieceArea'); if(area) area.style.display='none';
+  var btn=document.getElementById('btnMixToggle'); if(btn) btn.classList.remove('sel');
+  document.getElementById('p1Next').disabled=true;
+  goP(1);
+}
+
+// ══════ P1 原曲選択 ══════
+function renderPieceGrid(){
+  var g=document.getElementById('pieceGrid');
+  g.innerHTML=PIECES.map(function(p,i){
+    var cls=(selPiece&&selPiece.id===p.id)?'piece-card sel':'piece-card';
+    return '<div class="'+cls+'" onclick="pickPiece('+i+')">'
+      +'<div class="pc-top"><span class="pc-name">'+esc(p.name)+'</span><span class="pc-meta">'+esc(p.composer)+'／'+esc(p.tonic)+(p.mode==='minor'?'m':'')+'／'+p.tempo+'BPM</span></div>'
+      +'<div class="pc-desc">'+esc(p.ara)+'</div></div>';
+  }).join('');
+}
+function pickPiece(i){
+  selPiece=PIECES[i];
+  if(secondPiece&&secondPiece.id===selPiece.id) secondPiece=null; // 同じ曲は重ねられない
+  renderPieceGrid(); renderMixPieceGrid();
+  document.getElementById('p1Next').disabled=false;
+}
+function toggleMixPiece(){
+  var area=document.getElementById('mixPieceArea');
+  var showing = area.style.display!=='none';
+  area.style.display = showing?'none':'block';
+  document.getElementById('btnMixToggle').classList.toggle('sel', !showing);
+  if(showing){ secondPiece=null; } // 閉じたら重ねを解除
+  renderMixPieceGrid();
+}
+function renderMixPieceGrid(){
+  var g=document.getElementById('mixPieceGrid');
+  if(!g) return;
+  g.innerHTML=PIECES.filter(function(p){ return !selPiece||p.id!==selPiece.id; }).map(function(p){
+    var cls=(secondPiece&&secondPiece.id===p.id)?'piece-card sel':'piece-card';
+    return '<div class="'+cls+'" onclick="pickMixPiece(\''+p.id+'\')">'
+      +'<div class="pc-top"><span class="pc-name">'+esc(p.name)+'</span><span class="pc-meta">'+esc(p.composer)+'</span></div></div>';
+  }).join('');
+  var row=document.getElementById('rowMixLevel');
+  var opts=[{l:'軽め',v:0.35},{l:'均等',v:0.5},{l:'重め',v:0.65}];
+  row.innerHTML=opts.map(function(o){
+    return '<button class="chip'+(Math.abs(mixLevel-o.v)<0.01?' sel':'')+'" onclick="setMixLevel('+o.v+')">'+o.l+'</button>';
+  }).join('');
+}
+function pickMixPiece(id){
+  if(secondPiece&&secondPiece.id===id){ secondPiece=null; }
+  else{ secondPiece=PIECES.filter(function(p){return p.id===id;})[0]; }
+  renderMixPieceGrid();
+}
+function setMixLevel(v){ mixLevel=v; renderMixPieceGrid(); }
+
+// ══════ P2 ロジック選択 ══════
+function setLogicMode(m){
+  logicMode=m;
+  document.getElementById('btnModeSingle').classList.toggle('sel', m==='single');
+  document.getElementById('btnModeFusion').classList.toggle('sel', m==='fusion');
+  document.getElementById('logicModeNote').textContent = m==='single' ? '1つだけ選んでください。' : '主ロジックと副ロジックを2つ選んでください（保存モードは選べません）。';
+  if(m==='single'){ subLogic=null; }
+  renderLogicGrids();
+  updateP2Next();
+}
+function renderLogicGrids(){
+  var cats={pop:'logicGridPop',world:'logicGridWorld',preserve:'logicGridPreserve'};
+  Object.keys(cats).forEach(function(cat){
+    var g=document.getElementById(cats[cat]);
+    var html='';
+    Object.keys(LOGICS).forEach(function(key){
+      var l=LOGICS[key];
+      if(l.category!==cat) return;
+      var disabled=(logicMode==='fusion'&&cat==='preserve');
+      var cls='logic-card';
+      if(key===mainLogic) cls+=' sel-main';
+      if(key===subLogic) cls+=' sel-sub';
+      html+='<div class="'+cls+'" style="'+(disabled?'opacity:.4;pointer-events:none;':'')+'" onclick="pickLogic(\''+key+'\')">'
+        +'<div class="lc-top"><span class="lc-name">'+esc(l.name)+'</span>'
+        +(key===mainLogic?'<span class="lc-tag" style="background:var(--brass-bg);color:var(--brass);">主</span>':'')
+        +(key===subLogic?'<span class="lc-tag" style="background:var(--teal-bg);color:var(--teal);">副</span>':'')
+        +'</div><div class="lc-desc">'+esc(l.desc)+'</div></div>';
+    });
+    g.innerHTML=html;
+  });
+}
+function pickLogic(key){
+  if(logicMode==='single'){ mainLogic=key; }
+  else{
+    if(mainLogic===key){ mainLogic=null; }
+    else if(subLogic===key){ subLogic=null; }
+    else if(!mainLogic){ mainLogic=key; }
+    else if(!subLogic){ subLogic=key; }
+    else{ mainLogic=key; subLogic=null; } // 3つ目を選んだら主を差し替え
+  }
+  renderLogicGrids();
+  updateP2Next();
+}
+function updateP2Next(){
+  var ok = logicMode==='single' ? !!mainLogic : (!!mainLogic && !!subLogic);
+  document.getElementById('p2Next').disabled=!ok;
+}
+
+// ══════ P_Fusion 融合の核 ══════
+function renderFusionBox(){
+  var box=document.getElementById('fusionBox');
+  if(!fusionCore){ box.innerHTML=''; return; }
+  box.innerHTML='<div class="fusion-card">'
+    +'<div class="fc-cat">調</div><input class="fc-in" value="'+esc(fusionCore.key)+'" oninput="fusionCore.key=this.value" style="margin-bottom:7px;">'
+    +'<div class="fc-cat">テンポ(BPM)</div><input class="fc-in" type="number" value="'+fusionCore.tempo_bpm+'" oninput="fusionCore.tempo_bpm=parseInt(this.value,10)||100" style="margin-bottom:7px;">'
+    +'<div class="fc-cat">主：副 比率</div><input class="fc-in" value="'+fusionCore.main_ratio+':'+fusionCore.sub_ratio+'" oninput="updateRatio(this.value)" style="margin-bottom:7px;">'
+    +'<div class="fc-cat">混ざり方の説明</div><input class="fc-in" value="'+esc(fusionCore.blend_description)+'" oninput="fusionCore.blend_description=this.value">'
+    +'</div>';
+}
+function updateRatio(v){
+  var m=v.match(/(\d+)\s*[:：]\s*(\d+)/);
+  if(m){ fusionCore.main_ratio=parseInt(m[1],10); fusionCore.sub_ratio=parseInt(m[2],10); }
+}
+async function genFusion(){
+  if(busy) return; busy=true;
+  var note=document.getElementById('fusionNote');
+  document.getElementById('btnFusion').disabled=true; document.getElementById('btnReFusion').disabled=true;
+  note.innerHTML='<span class="spin">⏳</span> 編曲設計AIが融合の核を組んでいます…';
+  try{
+    var obj=await callJSONRetry(fusionPrompt(),SCHEMA_FUSION);
+    if(!obj||!obj.blend_description) throw new Error('融合の核の生成に失敗');
+    fusionCore=obj;
+    renderFusionBox();
+    note.textContent='内容は自由に書き換えられます。よければ次へ。';
+    document.getElementById('btnFusion').style.display='none';
+    document.getElementById('btnReFusion').style.display='block';
+    document.getElementById('fusionNext').disabled=false;
+  }catch(e){ note.textContent='生成に失敗しました。もう一度お試しください。（'+e.message+'）'; }
+  busy=false;
+  document.getElementById('btnFusion').disabled=false; document.getElementById('btnReFusion').disabled=false;
+}
+
+// ══════ P4 構成・書き出し設定 ══════
+function renderP4(){
+  var box=document.getElementById('sectionToggles');
+  box.innerHTML=SECTION_DEFS.map(function(s){
+    return '<label class="sect-toggle"><input type="checkbox" '+(sectionsOn[s.key]?'checked':'')+' onchange="toggleSection(\''+s.key+'\',this.checked)"><span class="st-name">'+esc(s.name)+'</span><span class="st-note">'+esc(s.note)+'</span></label>';
+  }).join('');
+  var row=document.getElementById('rowFluctuation');
+  row.innerHTML=FLUCT_OPTS.map(function(o){
+    return '<button class="chip'+(o===fluctuation?' sel':'')+'" onclick="setFluctuation(\''+o+'\')">'+esc(o)+'</button>';
+  }).join('');
+}
+function toggleSection(key,checked){ sectionsOn[key]=checked; }
+function setFluctuation(v){ fluctuation=v; renderP4(); }
+function goP5(){
+  renderSectionsView();
+  goP(5);
+}
+
+// ══════ P5 生成・試聴・書き出し ══════
+function renderSectionsView(){
+  var v=document.getElementById('sectionsView');
+  var secs=activeSections();
+  if(!secs.length){ v.innerHTML='<div class="works-empty">セクションが選ばれていません。構成の設定に戻ってください。</div>'; return; }
+  v.innerHTML=secs.map(function(s){
+    var chart = chordChart ? (chordChart.sections||[]).filter(function(x){return x.section_key===s.key;})[0] : null;
+    var badges='';
+    if(isFusion()){
+      badges='<span class="sec-logic-badge main">'+esc(LOGICS[mainLogic].name)+'</span><span class="sec-logic-badge sub">'+esc(LOGICS[subLogic].name)+'</span>';
+    }
+    if(secondPiece){
+      badges+='<span class="sec-logic-badge sub">＋'+esc(secondPiece.name)+'</span>';
+    }
+    return '<div class="section-card">'
+      +'<div class="sec-hd"><span class="sec-name">'+esc(s.name)+'</span>'+badges
+      +'</div>'
+      +(chart?('<div class="sec-chord">'+esc(chart.roman_numerals)+'<br>'+esc(chart.description)+'</div>'):'')
+      +'<div class="sec-play-row"><button class="play-btn" id="playbtn-'+s.key+'" onclick="togglePlay(\''+s.key+'\')">▶ 試聴</button></div>'
+      +'</div>';
+  }).join('');
+}
+async function genChordChart(){
+  if(busy) return; busy=true;
+  var note=document.getElementById('chartNote');
+  note.innerHTML='<span class="spin">⏳</span> 編曲家AIがコード進行表を組んでいます…';
+  try{
+    var obj=await callJSONRetry(chordChartPrompt(),SCHEMA_CHORDCHART);
+    if(!obj||!obj.sections||!obj.sections.length) throw new Error('コード進行表の生成に失敗');
+    chordChart=obj;
+    renderSectionsView();
+    note.textContent='コード進行表ができました。';
+  }catch(e){ note.textContent='生成に失敗しました。もう一度お試しください。（'+e.message+'）'; }
+  busy=false;
+}
+async function genSunoStyle(){
+  if(busy) return; busy=true;
+  var note=document.getElementById('chartNote');
+  note.innerHTML='<span class="spin">⏳</span> Sunoスタイル文を組んでいます…';
+  try{
+    var obj=await callJSONRetry(sunoStylePrompt(),SCHEMA_SUNOSTYLE);
+    if(!obj||!obj.style_text) throw new Error('スタイル文の生成に失敗');
+    sunoStyle=obj.style_text.slice(0,200);
+    document.getElementById('styleBox').style.display='block';
+    document.getElementById('styleText').value=sunoStyle;
+    updateStyleCount();
+    note.textContent='スタイル文ができました。';
+  }catch(e){ note.textContent='生成に失敗しました。もう一度お試しください。（'+e.message+'）'; }
+  busy=false;
+}
+function updateStyleCount(){
+  var len=document.getElementById('styleText').value.length;
+  var el=document.getElementById('styleCount');
+  el.textContent=len+' / 200文字';
+  el.className='charcount'+(len>200?' over':'');
+}
+document.addEventListener('input',function(e){ if(e.target&&e.target.id==='styleText') updateStyleCount(); });
+
+function copyStyle(){
+  var t=document.getElementById('styleText').value;
+  if(!t){ alert('先にスタイル文を組んでください。'); return; }
+  copyText(t,'スタイル文');
+}
+function copyText(t,label){
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(t).then(function(){ alert(label+'をコピーしました。'); },function(){ fallbackCopy(t,label); });
+  }else fallbackCopy(t,label);
+}
+function fallbackCopy(t,label){
+  var ta=document.createElement('textarea'); ta.value=t; document.body.appendChild(ta); ta.select();
+  try{ document.execCommand('copy'); alert(label+'をコピーしました。'); }catch(e){ alert('コピーに失敗しました。'); }
+  document.body.removeChild(ta);
+}
+
+// ══════ Web Audio 試聴・書き出しエンジン ══════
+// 1/fゆらぎ(簡易ピンクノイズ的ランダムウォーク)
+function makeFluctGen(){
+  var state=0;
+  return function(){ state = state*0.98 + (Math.random()-0.5)*0.12; if(state>0.5)state=0.5; if(state<-0.5)state=-0.5; return state; };
+}
+function buildLayers(){
+  // 同時に鳴らすレイヤーの配列を組む。主ロジックは常にフル音量+リズム担当。
+  // 副ロジック(フュージョン時)は同じ原曲を別ロジックで同時に重ね、リズムも音量を絞って同時に鳴らす(切り替えではない)。
+  // 重ね原曲(任意)は対旋律として低い音域に重ねる(リズムは持たない)。
+  var layers=[];
+  var mainGain = isFusion() ? ((fusionCore&&fusionCore.main_ratio)||60)/100 : 1;
+  layers.push({piece:selPiece, logicKey:mainLogic, gain:mainGain, drumGain:mainGain, octaveShift:0});
+  if(isFusion()){
+    var subGain = ((fusionCore&&fusionCore.sub_ratio)||40)/100;
+    layers.push({piece:selPiece, logicKey:subLogic, gain:subGain, drumGain:subGain, octaveShift:0});
+  }
+  if(secondPiece){
+    layers.push({piece:secondPiece, logicKey:mainLogic, gain:mixLevel, drumGain:0, octaveShift:-12});
+  }
+  return layers;
+}
+function buildSectionSchedule(sectionKey, ctx, startTime, targetDur){
+  // 指定セクションを、指定した尺(targetDur秒)いっぱいに、全レイヤーを同時に重ねてスケジュールする。
+  // 戻り値は必ず startTime+targetDur (無音ギャップを作らないため、呼び出し側はこの値をそのまま次の開始点に使える)。
+  var tempo=(fusionCore&&fusionCore.tempo_bpm)||selPiece.tempo;
+  var beatDur=60/tempo;
+  var noteDur=beatDur*0.5; // 8分音符単位で並べる簡易割付
+  var fluctGen=fluctuation==='あり（1/fゆらぎ）'?makeFluctGen():null;
+  var sparse = sectionKey==='intro' || sectionKey==='outro';
+  var loud = sectionKey==='sabi';
+  var endTime = startTime + targetDur;
+  var layers=buildLayers();
+
+  layers.forEach(function(layer){
+    var logic=LOGICS[layer.logicKey];
+    var tonicName=layer.piece.tonic;
+    var tonicPC=NOTE_INDEX[tonicName]!==undefined?NOTE_INDEX[tonicName]:0;
+    var steps=scaleStepsFor(layer.logicKey, layer.piece);
+
+    // 旋律：尺いっぱいになるまで主題を繰り返す
+    var t=startTime;
+    var passCount=0;
+    while(t < endTime - noteDur*0.25){
+      for(var i=0;i<layer.piece.notes.length;i++){
+        if(t>=endTime) break;
+        var midi=remapNote(layer.piece.notes[i],tonicPC,layer.piece.mode,steps)+layer.octaveShift;
+        if(loud) midi+=12; // サビはオクターブ上げで華やかに
+        var freq=midiToFreq(midi);
+        var jitter = fluctGen? fluctGen()*0.02 : 0;
+        var thisStart=Math.max(startTime,t+jitter);
+        var osc=ctx.createOscillator();
+        var gain=ctx.createGain();
+        osc.type= logic.category==='pop' ? 'sawtooth' : 'triangle';
+        osc.frequency.value=freq;
+        var vel=((sparse?0.12:0.2)+(fluctGen?fluctGen()*0.03:0))*layer.gain;
+        gain.gain.setValueAtTime(0,thisStart);
+        gain.gain.linearRampToValueAtTime(Math.max(0.02,vel),thisStart+0.02);
+        gain.gain.exponentialRampToValueAtTime(0.001,thisStart+noteDur*0.95);
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.start(thisStart); osc.stop(thisStart+noteDur);
+        t+=noteDur;
+      }
+      passCount++;
+      if(passCount>200) break; // 安全弁(無限ループ防止)
+    }
+
+    // リズム(sparseセクションと保存モード・drumGain=0のレイヤーは省略)：尺いっぱいに敷き詰める
+    if(!sparse && logic.kick.length && layer.drumGain>0){
+      var stepDur=beatDur*(4/logic.meterSteps); // 1周=1小節相当とみなす簡易換算
+      var loopLen=stepDur*logic.meterSteps;
+      var totalLoops=Math.ceil(targetDur/loopLen)+1;
+      for(var loop=0;loop<totalLoops;loop++){
+        for(var s=0;s<logic.meterSteps;s++){
+          var stepTime=startTime + loop*loopLen + s*stepDur;
+          if(logic.swing>0 && s%2===1) stepTime += stepDur*(logic.swing-0.5);
+          var jitterR = fluctGen? fluctGen()*0.015:0;
+          stepTime+=jitterR;
+          if(stepTime<startTime || stepTime>=endTime) continue;
+          if(logic.kick[s]) playDrum(ctx,'kick',stepTime, (loud?0.35:0.22)*layer.drumGain);
+          if(logic.snare[s]) playDrum(ctx,'snare',stepTime, (loud?0.3:0.18)*layer.drumGain);
+          if(logic.hat[s]) playDrum(ctx,'hat',stepTime, (loud?0.14:0.08)*layer.drumGain);
+        }
+      }
+    }
+  });
+  return endTime;
+}
+function playDrum(ctx,type,time,vel){
+  if(type==='kick'){
+    var osc=ctx.createOscillator(); var gain=ctx.createGain();
+    osc.type='sine'; osc.frequency.setValueAtTime(120,time); osc.frequency.exponentialRampToValueAtTime(45,time+0.1);
+    gain.gain.setValueAtTime(vel,time); gain.gain.exponentialRampToValueAtTime(0.001,time+0.15);
+    osc.connect(gain); gain.connect(ctx.destination); osc.start(time); osc.stop(time+0.16);
+  }else{
+    var bufSize=ctx.sampleRate*0.08;
+    var buf=ctx.createBuffer(1,bufSize,ctx.sampleRate);
+    var data=buf.getChannelData(0);
+    for(var i=0;i<bufSize;i++){ data[i]=(Math.random()*2-1)*(1-i/bufSize); }
+    var noise=ctx.createBufferSource(); noise.buffer=buf;
+    var filt=ctx.createBiquadFilter();
+    filt.type = type==='hat' ? 'highpass' : 'bandpass';
+    filt.frequency.value = type==='hat' ? 7000 : 1800;
+    var gain=ctx.createGain();
+    gain.gain.setValueAtTime(vel,time); gain.gain.exponentialRampToValueAtTime(0.001,time+(type==='hat'?0.04:0.12));
+    noise.connect(filt); filt.connect(gain); gain.connect(ctx.destination);
+    noise.start(time); noise.stop(time+0.15);
+  }
+}
+var PREVIEW_SECONDS=8;
+function togglePlay(sectionKey){
+  if(currentPlayingKey===sectionKey){ stopPlayback(); return; }
+  stopPlayback();
+  if(!audioCtx) audioCtx=new (window.AudioContext||window.webkitAudioContext)();
+  if(audioCtx.state==='suspended') audioCtx.resume();
+  currentPlayingKey=sectionKey;
+  var btn=document.getElementById('playbtn-'+sectionKey);
+  if(btn){ btn.textContent='■ 停止'; btn.classList.add('playing'); }
+  buildSectionSchedule(sectionKey, audioCtx, audioCtx.currentTime+0.05, PREVIEW_SECONDS);
+  setTimeout(function(){ if(currentPlayingKey===sectionKey) stopPlayback(); }, (PREVIEW_SECONDS+0.3)*1000);
+}
+function stopPlayback(){
+  if(currentPlayingKey){
+    var btn=document.getElementById('playbtn-'+currentPlayingKey);
+    if(btn){ btn.textContent='▶ 試聴'; btn.classList.remove('playing'); }
+  }
+  currentPlayingKey=null;
+}
+
+// WAVエンコード
+function encodeWAV(samples,sampleRate){
+  var buffer=new ArrayBuffer(44+samples.length*2);
+  var view=new DataView(buffer);
+  function writeString(offset,str){ for(var i=0;i<str.length;i++) view.setUint8(offset+i,str.charCodeAt(i)); }
+  writeString(0,'RIFF'); view.setUint32(4,36+samples.length*2,true); writeString(8,'WAVE');
+  writeString(12,'fmt '); view.setUint32(16,16,true); view.setUint16(20,1,true); view.setUint16(22,1,true);
+  view.setUint32(24,sampleRate,true); view.setUint32(28,sampleRate*2,true); view.setUint16(32,2,true); view.setUint16(34,16,true);
+  writeString(36,'data'); view.setUint32(40,samples.length*2,true);
+  var offset=44;
+  for(var i=0;i<samples.length;i++){
+    var s=Math.max(-1,Math.min(1,samples[i]));
+    view.setInt16(offset, s<0? s*0x8000 : s*0x7FFF, true);
+    offset+=2;
+  }
+  return buffer;
+}
+async function exportWav(){
+  if(busy) return;
+  var secs=activeSections();
+  if(!secs.length){ alert('セクションが選ばれていません。'); return; }
+  var note=document.getElementById('exportNote');
+  note.innerHTML='<span class="spin">⏳</span> 書き出し中…';
+  document.getElementById('btnExportWav').disabled=true;
+  try{
+    var perSec=Math.min(11, Math.floor(56/secs.length));
+    var totalDur=perSec*secs.length+2;
+    var offlineCtx=new OfflineAudioContext(1, Math.ceil(44100*totalDur), 44100);
+    var t=0.1;
+    secs.forEach(function(s){
+      t=buildSectionSchedule(s.key, offlineCtx, t, perSec);
+    });
+    var rendered=await offlineCtx.startRendering();
+    var data=rendered.getChannelData(0);
+    var wavBuf=encodeWAV(data,44100);
+    var blob=new Blob([wavBuf],{type:'audio/wav'});
+    var url=URL.createObjectURL(blob);
+    var a=document.createElement('a');
+    a.href=url; a.download=(selPiece.name+'_preview.wav').replace(/[\/\\:*?"<>|]/g,'');
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(function(){URL.revokeObjectURL(url);},4000);
+    note.textContent='書き出しました（約'+Math.round(totalDur)+'秒）。SunoのUpload Audioに読み込ませてください。';
+  }catch(e){ note.textContent='書き出しに失敗しました：'+e.message; }
+  document.getElementById('btnExportWav').disabled=false;
+}
+
+// ══════ 保存 ══════
+async function saveWork(){
+  if(!cu||!window.__fw){ alert('ログインが必要です。'); return; }
+  if(!selPiece||!mainLogic){ alert('原曲とロジックを選んでください。'); return; }
+  try{
+    var fw=window.__fw;
+    var id=workId||('w'+Date.now());
+    var logicLabel = isFusion() ? (LOGICS[mainLogic].name+' × '+LOGICS[subLogic].name) : LOGICS[mainLogic].name;
+    var data={
+      pieceId:selPiece.id, pieceName:selPiece.name, logicLabel:logicLabel,
+      secondPieceId:secondPiece?secondPiece.id:null, mixLevel:mixLevel,
+      logicMode:logicMode, mainLogic:mainLogic, subLogic:subLogic, fusionCore:fusionCore,
+      sectionsOn:sectionsOn, fluctuation:fluctuation, chordChart:chordChart, sunoStyle:sunoStyle,
+      updatedAt:fw.serverTimestamp()
+    };
+    if(!workId) data.createdAt=fw.serverTimestamp();
+    await fw.setDoc(fw.doc(fw.db,'score_engine/'+cu.uid+'/works/'+id),data,{merge:true});
+    workId=id;
+    alert('保存しました。');
+  }catch(e){ alert('保存に失敗しました：'+e.message); }
+}
+
+// 起動
+initAuth();
+renderPieceGrid();
+renderLogicGrids();
+renderP4();
+</script>
+
+<script type="module">
+import{initializeApp}from'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import{getAuth,signInWithEmailAndPassword,signOut,onAuthStateChanged}from'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+import{getFirestore,collection,doc,setDoc,getDoc,getDocs,orderBy,query,serverTimestamp}from'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+const cfg={apiKey:"AIzaSyCVk2miG5TK1ffTofXLh0hHgeSbOvmIgZ8",authDomain:"kensetsu-nippo-842a2.firebaseapp.com",projectId:"kensetsu-nippo-842a2",storageBucket:"kensetsu-nippo-842a2.firebasestorage.app",messagingSenderId:"702880974315",appId:"1:702880974315:web:985321dc9180046629c5ae"};
+const app=initializeApp(cfg);const auth=getAuth(app);const db=getFirestore(app);
+window.__fw={auth,db,signInWithEmailAndPassword,signOut,onAuthStateChanged,collection,doc,setDoc,getDoc,getDocs,orderBy,query,serverTimestamp};
+window.dispatchEvent(new Event('fbReady'));
+</script>
+</body>
+</html>
