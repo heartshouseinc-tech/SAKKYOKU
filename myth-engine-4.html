@@ -1,0 +1,1546 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MYTH ENGINE — 物語骨格変換工房</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Yuji+Syuku&family=Noto+Serif+JP:wght@300;400;700&family=Space+Mono:wght@400;700&display=swap');
+:root{
+  --bg:#f5f1ea;--bg2:#ece4d6;--bg3:#e0d5bd;--card:#fffdf8;
+  --text:#1c1814;--text2:#3a2f20;--muted:#8a7a5a;--border:#cdb98f;
+  --shadow:0 2px 10px rgba(0,0,0,.08);
+  --myth:#3f2a63;--myth-l:#6248a0;--myth-bg:#ece6f5;    /* 紫 */
+  --gold:#9a6e1a;--gold-l:#c8a84b;--gold-bg:#fbf4dd;     /* 金茶 */
+  --shu:#a03a2e;--shu-l:#c85a4a;--shu-bg:#fbe9e6;        /* 朱 */
+  --mid:#1a6a55;--mid-l:#3a9a80;--mid-bg:#e6f5ee;        /* 緑青 */
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;overflow:hidden;}
+body{background:var(--bg);color:var(--text);font-family:'Noto Serif JP',serif;display:flex;flex-direction:column;}
+
+#loginScreen{display:none;position:fixed;inset:0;background:linear-gradient(160deg,#1a1228,#2c1e46);align-items:center;justify-content:center;padding:20px;z-index:9999;}
+#loginScreen.active{display:flex;}
+.lcard{background:var(--card);border-radius:16px;padding:28px 22px;width:min(360px,100%);box-shadow:0 16px 48px rgba(0,0,0,.35);}
+.llogo{text-align:center;margin-bottom:20px;}
+.lico{font-size:44px;display:block;margin-bottom:8px;}
+.ltitle{font-family:'Yuji Syuku','Noto Serif JP',serif;font-size:22px;color:var(--text);}
+.lsub{font-size:11px;color:var(--muted);margin-top:3px;line-height:1.6;}
+.lfg{margin-bottom:11px;}
+.lfg label{display:block;font-family:'Space Mono',monospace;font-size:10px;letter-spacing:.15em;color:var(--myth);margin-bottom:4px;}
+.lfg input{width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:7px;font-size:15px;outline:none;background:var(--bg);color:var(--text);font-family:inherit;}
+.lfg input:focus{border-color:var(--myth-l);}
+.lerr{color:#c03020;font-size:12px;text-align:center;min-height:16px;margin-top:4px;}
+.lbtn{width:100%;padding:12px;background:linear-gradient(135deg,var(--myth-l),var(--myth));color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;margin-top:4px;font-family:inherit;}
+
+.hd{background:var(--card);border-bottom:2px solid var(--border);padding:8px 14px;display:none;align-items:center;gap:8px;flex-shrink:0;box-shadow:var(--shadow);}
+.hd-title{font-family:'Yuji Syuku','Noto Serif JP',serif;font-size:15px;color:var(--text);flex:1;}
+.hdbtn{background:var(--bg2);border:1px solid var(--border);color:var(--muted);font-size:10px;padding:4px 9px;border-radius:7px;cursor:pointer;font-family:inherit;}
+
+.phase-bar{background:var(--bg2);border-bottom:1px solid var(--border);display:none;flex-shrink:0;overflow-x:auto;}
+.phase-steps{display:flex;min-width:max-content;}
+.pstep{flex-shrink:0;padding:7px 10px;text-align:center;font-family:'Space Mono',monospace;font-size:8px;letter-spacing:.03em;color:var(--muted);border-bottom:2px solid transparent;transition:all .2s;white-space:nowrap;}
+.pstep.active{color:var(--myth);border-bottom-color:var(--myth-l);}
+.pstep.done{color:var(--mid);border-bottom-color:var(--mid-l);}
+.pstep .ps-ico{font-size:12px;display:block;margin-bottom:1px;}
+
+.content{flex:1;overflow-y:auto;display:flex;flex-direction:column;}
+.screen{display:none;}
+.screen.show{display:flex;flex-direction:column;flex:1;}
+.phase-wrap{overflow-y:auto;flex:1;padding:14px;}
+.phase-hd{display:flex;align-items:center;gap:8px;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--border);}
+.phase-hd-ico{font-size:22px;}
+.phase-hd-title{font-family:'Yuji Syuku','Noto Serif JP',serif;font-size:17px;color:var(--text);flex:1;}
+.phase-note{font-size:11px;color:var(--muted);line-height:1.7;margin-bottom:12px;}
+
+#p0{background:linear-gradient(180deg,#ece6f5,var(--bg));align-items:center;text-align:center;padding:20px 16px 30px;}
+.top-ico{font-size:56px;margin-bottom:12px;filter:drop-shadow(0 4px 12px rgba(63,42,99,.25));}
+.top-title{font-family:'Yuji Syuku','Noto Serif JP',serif;font-size:clamp(24px,7vw,32px);color:var(--text);margin-bottom:7px;}
+.top-title span{color:var(--myth-l);}
+.top-sub{font-size:12px;color:var(--text2);line-height:1.8;margin-bottom:18px;max-width:380px;}
+.top-btn{width:100%;max-width:380px;padding:14px;background:linear-gradient(135deg,var(--myth-l),var(--myth));color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;margin-bottom:12px;}
+.top-link{width:100%;max-width:380px;padding:11px;background:var(--card);border:1.5px solid var(--gold-l);color:var(--gold);border-radius:10px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;margin-bottom:20px;text-decoration:none;display:block;text-align:center;}
+.works-box{width:100%;max-width:420px;text-align:left;}
+.works-label{font-family:'Space Mono',monospace;font-size:9px;letter-spacing:.2em;color:var(--myth);margin-bottom:8px;}
+.work-item{background:var(--card);border:1px solid var(--border);border-radius:9px;padding:10px 12px;margin-bottom:7px;cursor:pointer;display:flex;align-items:center;gap:8px;}
+.work-item:active{background:var(--bg2);}
+.wi-title{font-size:13px;font-weight:700;flex:1;}
+.wi-meta{font-size:10px;color:var(--muted);}
+.works-empty{font-size:11px;color:var(--muted);padding:8px 2px;}
+
+.mode-grid{display:flex;flex-direction:column;gap:11px;}
+.mode-card{background:var(--card);border:1.5px solid var(--border);border-radius:12px;padding:16px;cursor:pointer;}
+.mode-card.sel{border-color:var(--myth-l);background:var(--myth-bg);box-shadow:0 0 0 2px rgba(98,72,160,.2);}
+.mode-card.disabled{opacity:.5;cursor:default;}
+.mc-top{display:flex;align-items:center;gap:9px;margin-bottom:6px;}
+.mc-ico{font-size:24px;}
+.mc-title{font-family:'Yuji Syuku','Noto Serif JP',serif;font-size:16px;flex:1;}
+.mc-badge{font-family:'Space Mono',monospace;font-size:8px;padding:3px 8px;border-radius:7px;background:var(--gold-bg);color:var(--gold);border:1px solid var(--gold-l);}
+.mc-desc{font-size:12px;color:var(--text2);line-height:1.7;}
+
+.kata-grid{display:flex;flex-direction:column;gap:10px;}
+.kata-card{background:var(--card);border:1.5px solid var(--border);border-radius:12px;padding:13px;cursor:pointer;}
+.kata-card.sel{border-color:var(--myth-l);background:var(--myth-bg);box-shadow:0 0 0 2px rgba(98,72,160,.2);}
+.kc-top{display:flex;align-items:baseline;gap:8px;margin-bottom:5px;}
+.kc-name{font-family:'Yuji Syuku','Noto Serif JP',serif;font-size:16px;}
+.kc-badges{display:flex;gap:4px;margin-left:auto;}
+.kc-badge{font-family:'Space Mono',monospace;font-size:8px;padding:2px 6px;border-radius:6px;background:var(--gold-bg);color:var(--gold);border:1px solid var(--gold-l);}
+.kc-desc{font-size:11.5px;color:var(--text2);line-height:1.7;margin-bottom:7px;}
+.kc-roles{display:flex;flex-wrap:wrap;gap:4px;}
+.kc-role{font-size:10px;padding:3px 8px;border-radius:10px;background:var(--bg2);border:1px solid var(--border);color:var(--text2);}
+
+.set-group{margin-bottom:16px;}
+.set-label{font-family:'Space Mono',monospace;font-size:9px;letter-spacing:.18em;color:var(--myth);margin-bottom:7px;display:flex;align-items:center;gap:6px;}
+.set-label .jp{font-family:'Noto Serif JP',serif;font-size:12px;font-weight:700;letter-spacing:0;color:var(--text);}
+.chip-row{display:flex;flex-wrap:wrap;gap:6px;}
+.chip{padding:8px 13px;border-radius:9px;border:1.5px solid var(--border);background:var(--card);font-size:12.5px;cursor:pointer;font-family:inherit;color:var(--text2);}
+.chip.sel{border-color:var(--myth-l);background:var(--myth-bg);color:var(--myth);font-weight:700;}
+#eraFreeBox{margin-top:7px;display:none;}
+#eraFreeBox input{width:100%;padding:9px 11px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg);font-family:inherit;outline:none;}
+.set-inputs input,.set-inputs textarea{width:100%;padding:9px 11px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg);color:var(--text);font-family:inherit;outline:none;margin-bottom:4px;}
+.set-inputs textarea{min-height:70px;line-height:1.7;}
+.set-inputs input:focus,.set-inputs textarea:focus{border-color:var(--myth-l);}
+.hint{font-size:10.5px;color:var(--muted);margin-bottom:9px;line-height:1.6;}
+
+.gen-btn{width:100%;padding:14px;background:linear-gradient(135deg,var(--myth-l),var(--myth));color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;}
+.gen-btn:disabled{opacity:.45;}
+.gen-btn.sub{background:var(--bg2);color:var(--text2);border:1px solid var(--border);font-weight:400;font-size:13px;padding:11px;margin-top:8px;}
+.charcount{font-size:10px;color:var(--muted);}
+.charcount.over{color:var(--shu);font-weight:700;}
+.lyric-sec-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:11px 12px;margin-bottom:9px;}
+.lsc-hd{display:flex;align-items:center;gap:8px;margin-bottom:7px;}
+.lsc-name{font-family:'Yuji Syuku','Noto Serif JP',serif;font-size:14px;color:var(--myth);flex:1;}
+.lsc-tag{font-family:'Space Mono',monospace;font-size:9px;padding:2px 8px;border-radius:6px;background:var(--myth-bg);color:var(--myth);}
+.lsc-in{width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:7px;font-size:13px;line-height:1.8;background:var(--bg);color:var(--text);font-family:inherit;outline:none;resize:vertical;min-height:70px;}
+.prog-note{font-size:11px;color:var(--muted);text-align:center;margin-top:9px;min-height:16px;}
+.spin{display:inline-block;animation:sp 1s linear infinite;}
+@keyframes sp{to{transform:rotate(360deg);}}
+
+.cast-card,.rule-row{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:11px 12px;margin-bottom:8px;}
+.cc-top{display:flex;align-items:center;gap:7px;margin-bottom:6px;}
+.cc-ico{font-size:17px;}
+.cc-role{font-size:10px;color:var(--muted);flex:1;}
+.cc-name-in{font-weight:700;font-size:14px;}
+.cc-desc-in{font-size:12px;}
+.rule-cat{font-family:'Space Mono',monospace;font-size:9px;color:var(--myth);letter-spacing:.1em;margin-bottom:4px;}
+.rule-detail-in{font-size:12.5px;}
+.summary-box textarea{width:100%;padding:10px 11px;border:1.5px solid var(--border);border-radius:8px;font-size:12.5px;line-height:1.8;background:var(--myth-bg);color:var(--text2);font-family:inherit;outline:none;margin-bottom:11px;min-height:70px;}
+
+.kosei-list{margin:14px 0;}
+.kosei-item{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:7px;display:flex;gap:10px;align-items:flex-start;}
+.ki-no{font-family:'Space Mono',monospace;font-size:10px;color:var(--myth);padding-top:2px;flex-shrink:0;width:34px;}
+.ki-body{flex:1;}
+.ki-title{font-size:13.5px;font-weight:700;margin-bottom:2px;}
+.ki-goal{font-size:11px;color:var(--muted);line-height:1.6;}
+.ki-st{flex-shrink:0;font-size:14px;padding-top:1px;}
+
+.out-bar{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;}
+.out-btn{padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--card);font-size:11.5px;cursor:pointer;font-family:inherit;color:var(--text2);text-decoration:none;}
+.out-btn.pri{background:var(--myth);color:#fff;border-color:var(--myth);font-weight:700;}
+.prose-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:11px;}
+.pc-title{font-family:'Yuji Syuku','Noto Serif JP',serif;font-size:15px;color:var(--myth);margin-bottom:8px;border-bottom:1px dashed var(--border);padding-bottom:6px;}
+.pc-body{font-size:13.5px;line-height:2.0;color:var(--text);white-space:pre-wrap;}
+.vpaper{background:var(--card);border:1px solid var(--border);border-radius:4px;box-shadow:var(--shadow);overflow-x:auto;overflow-y:hidden;direction:rtl;}
+.vinner{writing-mode:vertical-rl;direction:ltr;height:62vh;min-height:380px;padding:26px 30px;font-size:15px;line-height:2.15;color:var(--text);}
+.vd-hashira{font-family:'Yuji Syuku','Noto Serif JP',serif;font-size:17px;color:var(--myth);border-right:2px solid var(--myth-l);padding-right:8px;margin-left:22px;letter-spacing:.12em;}
+.vd-body{margin-left:14px;white-space:pre-wrap;}
+.vtitle-col{font-family:'Yuji Syuku','Noto Serif JP',serif;font-size:24px;letter-spacing:.2em;color:var(--text);margin-left:30px;border-right:4px double var(--border);padding-right:14px;}
+.ref-box{background:var(--gold-bg);border:1px solid var(--gold-l);border-radius:9px;padding:11px 12px;margin-top:11px;font-size:11.5px;line-height:1.8;color:var(--text2);display:none;}
+.ref-box .rb-t{font-weight:700;color:var(--gold);margin-bottom:5px;}
+.ref-box .rb-sec{margin-bottom:8px;}
+
+.nav-row{display:flex;gap:8px;margin-top:16px;}
+.nav-row .back{flex:1;padding:12px;background:var(--bg2);border:1px solid var(--border);border-radius:9px;font-size:13px;cursor:pointer;font-family:inherit;color:var(--text2);}
+.nav-row .next{flex:2;padding:12px;background:linear-gradient(135deg,var(--myth-l),var(--myth));color:#fff;border:none;border-radius:9px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;}
+.nav-row .next:disabled{opacity:.45;}
+
+@media print{
+  body{overflow:visible;height:auto;background:#fff;}
+  .hd,.phase-bar,.out-bar,.nav-row,#loginScreen{display:none!important;}
+  .content{overflow:visible;}
+  .screen{display:none!important;}
+  #p7{display:block!important;}
+  .phase-wrap{overflow:visible;padding:0;}
+  .phase-hd,.phase-note{display:none;}
+  .vpaper{border:none;box-shadow:none;overflow:visible;}
+  .vinner{height:auto;min-height:0;}
+  .prose-card{break-inside:avoid;border:none;border-bottom:1px solid #ccc;border-radius:0;}
+  .ref-box{display:block!important;}
+}
+</style>
+</head>
+<body>
+
+<div id="loginScreen" class="active">
+  <div class="lcard">
+    <div class="llogo"><span class="lico">🌀</span><div class="ltitle">MYTH ENGINE</div><div class="lsub">物語骨格変換工房<br>万国共通の構成パターンで新しい物語を</div></div>
+    <div class="lfg"><label>MAIL</label><input type="email" id="dEmail" autocomplete="email" placeholder="example@mail.com"></div>
+    <div class="lfg"><label>PASSWORD</label><input type="password" id="dPass" autocomplete="current-password" placeholder="パスワード"></div>
+    <div class="lerr" id="dErr"></div>
+    <button class="lbtn" onclick="doLogin()">🔑 工房に入る（ログイン）</button>
+  </div>
+</div>
+
+<div class="hd" id="appHd">
+  <div class="hd-title">🌀 MYTH ENGINE</div>
+  <button class="hdbtn" onclick="goP(0)">工房口</button>
+  <button class="hdbtn" onclick="doLogout()">退出</button>
+</div>
+
+<div class="phase-bar" id="phaseBar">
+  <div class="phase-steps">
+    <div class="pstep" id="ps1"><span class="ps-ico">🔀</span>入口</div>
+    <div class="pstep" id="ps2"><span class="ps-ico">🗺️</span>骨格</div>
+    <div class="pstep" id="ps3"><span class="ps-ico">🧬</span>肉付け</div>
+    <div class="pstep" id="ps4"><span class="ps-ico">🎭</span>配役</div>
+    <div class="pstep" id="psCase"><span class="ps-ico" id="psCaseIco">🔎</span><span id="psCaseLabel">核</span></div>
+    <div class="pstep" id="ps5"><span class="ps-ico">🌍</span>世界観</div>
+    <div class="pstep" id="ps6"><span class="ps-ico">✍️</span>生成</div>
+    <div class="pstep" id="ps7"><span class="ps-ico">📖</span>完成稿</div>
+  </div>
+</div>
+
+<div class="content">
+
+<div class="screen" id="p0">
+  <div class="top-ico">🌀</div>
+  <div class="top-title">物語骨格<span>変換工房</span></div>
+  <div class="top-sub">千の顔を持つ英雄、三幕構成、起承転結——<br>万国共通の物語構成パターンに、<br>あなたの主人公と世界を肉付けする。</div>
+  <button class="top-btn" onclick="startNew()">🌀 新しい物語をこしらえる</button>
+  <a class="top-link" href="https://heartshouseinc-tech.github.io/SAKKYOKU/" target="_blank">🎼 曲を作る（SCORE ENGINEへ）</a>
+  <div class="works-box">
+    <div class="works-label">━ 書き溜めた物語 ━</div>
+    <div id="worksList"><div class="works-empty">読み込み中…</div></div>
+  </div>
+</div>
+
+<div class="screen" id="p1">
+  <div class="phase-wrap">
+    <div class="phase-hd"><span class="phase-hd-ico">🔀</span><span class="phase-hd-title">骨格の出所を選ぶ</span></div>
+    <div class="mode-grid">
+      <div class="mode-card sel" onclick="pickMode('A')">
+        <div class="mc-top"><span class="mc-ico">🌍</span><span class="mc-title">世界共通の構成パターンから選ぶ</span><span class="mc-badge">v1</span></div>
+        <div class="mc-desc">三幕構成・起承転結・英雄の旅、本格・倒叙・密室などの推理小説の型、ロマンティックコメディ・すれ違い悲恋などの恋愛小説の型を収録。著作権と無関係な物語理論・ジャンル構造を骨格として使う。人物・時代・場所は自由に肉付けできる。</div>
+      </div>
+      <div class="mode-card disabled">
+        <div class="mc-top"><span class="mc-ico">📖</span><span class="mc-title">著作権切れ小説から骨格を抽出する</span><span class="mc-badge">準備中</span></div>
+        <div class="mc-desc">青空文庫の作品からプロットを解析して骨格化するモード。次のアップデートで追加予定。</div>
+      </div>
+    </div>
+    <div class="nav-row"><button class="back" onclick="goP(0)">← 工房口へ</button><button class="next" onclick="goP(2)">骨格を選ぶ →</button></div>
+  </div>
+</div>
+
+<div class="screen" id="p2">
+  <div class="phase-wrap">
+    <div class="phase-hd"><span class="phase-hd-ico">🗺️</span><span class="phase-hd-title">物語の骨格を選ぶ</span></div>
+    <div class="kata-grid" id="kataGrid"></div>
+    <div class="nav-row"><button class="back" onclick="goP(1)">← 入口へ</button><button class="next" id="p2Next" disabled onclick="goP(3)">肉付けへ →</button></div>
+  </div>
+</div>
+
+<div class="screen" id="p3">
+  <div class="phase-wrap">
+    <div class="phase-hd"><span class="phase-hd-ico">🧬</span><span class="phase-hd-title">主人公と世界を肉付けする</span></div>
+
+    <div class="set-group"><div class="set-label">HERO <span class="jp">主人公</span></div>
+      <div class="set-inputs"><input id="heroName" placeholder="名前（空欄なら本文中でAIが自由に決めます）"></div>
+      <div class="chip-row" id="rowGender" style="margin-bottom:6px;"></div>
+      <div class="chip-row" id="rowBeing" style="margin-bottom:6px;"></div>
+      <div class="set-inputs"><textarea id="heroFreeDesc" placeholder="職業・性格・境遇など自由に（例：内気な時計職人、記憶を失った傭兵）空欄可"></textarea></div>
+    </div>
+
+    <div class="set-group"><div class="set-label">SEED <span class="jp">物語の種（任意）</span></div>
+      <div class="set-inputs"><textarea id="premiseHint" placeholder="一言あらすじやモチーフがあれば（空欄なら骨格と主人公設定からAIが自由に発想します）"></textarea></div>
+    </div>
+
+    <div class="set-group"><div class="set-label">ERA <span class="jp">時代</span></div>
+      <div class="chip-row" id="rowEra"></div>
+      <div id="eraFreeBox"><input id="eraFreeIn" placeholder="例：蒸気機関と魔法が共存する時代 など"></div></div>
+
+    <div class="set-group"><div class="set-label">PLACE <span class="jp">場所</span></div>
+      <div class="chip-row" id="rowPlace"></div>
+      <div class="hint">「海外ムード」は実在の国名・民族名を出さず、地理的な雰囲気のみで描きます。</div></div>
+
+    <div class="set-group"><div class="set-label">LENGTH <span class="jp">尺</span></div>
+      <div class="chip-row" id="rowLength"></div></div>
+
+    <div class="set-group"><div class="set-label">TONE <span class="jp">トーン</span></div>
+      <div class="chip-row" id="rowTone"></div></div>
+
+    <div class="nav-row"><button class="back" onclick="goP(2)">← 骨格へ</button><button class="next" onclick="goP4()">配役を組む →</button></div>
+  </div>
+</div>
+
+<div class="screen" id="p4">
+  <div class="phase-wrap">
+    <div class="phase-hd"><span class="phase-hd-ico">🎭</span><span class="phase-hd-title">配役を組む</span></div>
+    <div class="phase-note">骨格が持つ「機能役割」に、具体的な登場人物を割り当てます。生成後、名前や設定は自由に書き換えられます。</div>
+    <button class="gen-btn" id="btnCast" onclick="genCast()">🎭 配役表をAIに組ませる</button>
+    <div id="castList"></div>
+    <div class="prog-note" id="castNote"></div>
+    <button class="gen-btn sub" id="btnReCast" onclick="genCast()" style="display:none;">🔁 組み直す</button>
+    <div class="nav-row"><button class="back" onclick="goP(3)">← 肉付けへ</button><button class="next" id="p4Next" disabled onclick="goAfterCast()">次へ →</button></div>
+  </div>
+</div>
+
+<div class="screen" id="pCase">
+  <div class="phase-wrap">
+    <div class="phase-hd"><span class="phase-hd-ico" id="caseHdIco">🔎</span><span class="phase-hd-title" id="caseHdTitle">事件の核を固める</span></div>
+    <div class="phase-note" id="caseCaution"></div>
+    <div class="phase-note" id="caseIntro">解決（犯人・動機・手段・機会）を最初に一つだけ確定し、以降のすべての段はこれと矛盾しないように書かれます。生成後は自由に書き換えられます。</div>
+
+    <div id="mysterySections">
+    <button class="gen-btn" id="btnSolution" onclick="genSolution()">🔎 解決をAIに組ませる</button>
+    <div id="solutionBox"></div>
+    <div class="prog-note" id="solutionNote"></div>
+    <button class="gen-btn sub" id="btnReSolution" onclick="genSolution()" style="display:none;">🔁 解決を組み直す</button>
+
+    <div id="trickSection" style="display:none;margin-top:14px;">
+      <button class="gen-btn" id="btnTrick" onclick="genTrick()">🔧 トリックをAIに組ませる</button>
+      <div id="trickBox"></div>
+      <div class="prog-note" id="trickNote"></div>
+      <button class="gen-btn sub" id="btnReTrick" onclick="genTrick()" style="display:none;">🔁 トリックを組み直す</button>
+    </div>
+
+    <div id="clueSection" style="display:none;margin-top:14px;">
+      <button class="gen-btn" id="btnClue" onclick="genClue()">🧩 手がかり計画をAIに組ませる</button>
+      <div id="clueBox"></div>
+      <div class="prog-note" id="clueNote"></div>
+      <button class="gen-btn sub" id="btnReClue" onclick="genClue()" style="display:none;">🔁 手がかりを組み直す</button>
+    </div>
+    </div>
+
+    <div id="romanceSections" style="display:none;">
+      <button class="gen-btn" id="btnRelation" onclick="genRelation()">💞 関係性の核をAIに組ませる</button>
+      <div id="relationBox"></div>
+      <div class="prog-note" id="relationNote"></div>
+      <button class="gen-btn sub" id="btnReRelation" onclick="genRelation()" style="display:none;">🔁 組み直す</button>
+    </div>
+
+    <div class="nav-row"><button class="back" onclick="goP(4)">← 配役へ</button><button class="next" id="caseNext" disabled onclick="finishCase()">世界観へ →</button></div>
+  </div>
+</div>
+
+<div class="screen" id="p5">
+  <div class="phase-wrap">
+    <div class="phase-hd"><span class="phase-hd-ico">🌍</span><span class="phase-hd-title">世界観ルールを決める</span></div>
+    <div class="phase-note">通貨・身分・移動手段などを一度だけ決め、全編を通して使い回します（設定のブレを防ぎます）。</div>
+    <button class="gen-btn" id="btnRules" onclick="genRules()">🌍 世界観をAIに組ませる</button>
+    <div id="rulesList"></div>
+    <div class="prog-note" id="rulesNote"></div>
+    <button class="gen-btn sub" id="btnReRules" onclick="genRules()" style="display:none;">🔁 組み直す</button>
+    <div class="nav-row"><button class="back" onclick="goBackFromRules()">← 戻る</button><button class="next" id="p5Next" disabled onclick="goP6()">執筆へ →</button></div>
+  </div>
+</div>
+
+<div class="screen" id="p6">
+  <div class="phase-wrap">
+    <div class="phase-hd"><span class="phase-hd-ico">✍️</span><span class="phase-hd-title">物語を書き下ろす</span></div>
+    <button class="gen-btn" id="btnKosei" onclick="genKosei()">📐 構成案を組む</button>
+    <div class="kosei-list" id="koseiList"></div>
+    <div class="prog-note" id="progNote"></div>
+    <button class="gen-btn" id="btnHonmon" onclick="genHonmon()" style="display:none;">✍️ この構成で本文を書き下ろす</button>
+    <button class="gen-btn sub" id="btnReKosei" onclick="genKosei()" style="display:none;">🔁 構成を組み直す</button>
+    <div class="nav-row"><button class="back" onclick="goP(5)">← 世界観へ</button><button class="next" id="p6Next" disabled onclick="goP7()">完成稿を見る →</button></div>
+  </div>
+</div>
+
+<div class="screen" id="p7">
+  <div class="phase-wrap">
+    <div class="phase-hd"><span class="phase-hd-ico">📖</span><span class="phase-hd-title" id="outTitle">完成稿</span></div>
+    <div class="out-bar">
+      <button class="out-btn pri" onclick="saveWork()">💾 保存</button>
+      <button class="out-btn" onclick="copyAll()">📋 全文コピー</button>
+      <button class="out-btn" onclick="toggleVertical()">📜 縦書き切替</button>
+      <button class="out-btn" onclick="toggleRef()">🗂 設定資料</button>
+      <button class="out-btn" onclick="window.print()">🖨 印刷 / PDF</button>
+      <button class="out-btn" onclick="showLyrics()">🎤 歌詞を起こす</button>
+      <a class="out-btn" href="https://heartshouseinc-tech.github.io/SAKKYOKU/" target="_blank">🎼 曲を作る</a>
+    </div>
+    <div id="scriptView"></div>
+    <div class="ref-box" id="refBox"></div>
+    <div class="nav-row"><button class="back" onclick="goP(6)">← 生成へ</button><button class="next" onclick="goP(0)">工房口へ戻る</button></div>
+  </div>
+</div>
+
+<div class="screen" id="pLyrics">
+  <div class="phase-wrap">
+    <div class="phase-hd"><span class="phase-hd-ico">🎤</span><span class="phase-hd-title">歌詞を起こす</span></div>
+    <div class="phase-note">この物語のあらすじ・感情の流れから、Sunoにそのまま貼り付けられる歌詞を作ります。セクション名はSCORE ENGINE側の構成と合わせています。</div>
+    <div class="set-group">
+      <div class="set-label">SECTIONS <span class="jp">使うセクション</span></div>
+      <div id="lyricSectionToggles"></div>
+    </div>
+    <button class="gen-btn" id="btnLyrics" onclick="genLyrics()">🎤 歌詞をAIに起こさせる</button>
+    <div id="lyricsView"></div>
+    <div class="prog-note" id="lyricsNote"></div>
+    <button class="gen-btn sub" id="btnReLyrics" onclick="genLyrics()" style="display:none;">🔁 書き直す</button>
+    <div class="out-bar" id="lyricsOutBar" style="display:none;margin-top:12px;">
+      <button class="out-btn pri" onclick="copyLyrics()">📋 Suno歌詞欄用にコピー</button>
+      <span class="charcount" id="lyricsCharCount" style="align-self:center;"></span>
+    </div>
+    <div class="nav-row"><button class="back" onclick="hideLyrics()">← 完成稿へ戻る</button></div>
+  </div>
+</div>
+
+</div>
+
+<script>
+// ══════════════════════════════════════════════
+// MYTH ENGINE v1 — 物語骨格変換工房
+// RAKUGO系アーキテクチャ流用（askAI + Firestore）
+// ══════════════════════════════════════════════
+
+var FUNC_BASE=(location.hostname==='localhost'||location.hostname==='127.0.0.1')
+  ?'http://localhost:5001/kensetsu-nippo-842a2/us-central1'
+  :'https://us-central1-kensetsu-nippo-842a2.cloudfunctions.net';
+var ACCESS_KEY='HeartsHouse2026Key';
+
+// ── 骨格ライブラリ（v1:4種） ──
+var ROLE_ICON={hero:'🗡️',mentor:'🧙',guardian:'🚪',herald:'📯',shadow:'🌑',ally:'🤝',trickster:'🃏',shapeshifter:'🎭',antagonist:'⚔️',related:'👤',detective:'🔍',victim:'🥀',culprit:'🎭',suspect:'❓',watson:'📓',witness:'👁️',femme:'🌹',love:'💞',rival:'😤',confidant:'🤍',obstacle:'⛔',force:'🌪️',time:'🍂'};
+var KATAS_UNIVERSAL={
+  '三幕構成':{
+    category:'universal',
+    desc:'均衡→崩壊→新均衡。最も普遍的で短編・練習向き。',
+    good:'短く要点を掴みたい時に',
+    roles:[{key:'hero',label:'主人公'},{key:'antagonist',label:'敵対者・障害'},{key:'ally',label:'協力者'}],
+    dans:[
+      {tag:'第一幕',t:'均衡',turn:'主人公の日常と、そこに欠けているものを描く'},
+      {tag:'第二幕',t:'崩壊と苦闘',turn:'均衡が崩れ、主人公が試練の連続に直面する'},
+      {tag:'第三幕',t:'新しい均衡',turn:'試練の果てに変化した主人公が新しい日常を迎える'}
+    ]
+  },
+  '起承転結':{
+    category:'universal',
+    desc:'対立軸を必須としない東アジア型の構成。静かな物語にも向く。',
+    good:'対立より情景・心情を大事にしたい時に',
+    roles:[{key:'hero',label:'主人公'},{key:'related',label:'関係者・相手役'}],
+    dans:[
+      {tag:'起',t:'起',turn:'主人公とその世界を紹介する'},
+      {tag:'承',t:'承',turn:'物語が展開し、関係や状況が深まる'},
+      {tag:'転',t:'転',turn:'予期せぬ転換・視点の反転が起こる'},
+      {tag:'結',t:'結',turn:'転換を受けて物語が収まる'}
+    ]
+  },
+  'ストーリーサークル':{
+    category:'universal',
+    desc:'英雄の旅の簡略版（ダン・ハーモン式）。8段で組みやすく実務的。',
+    good:'中編を無理なく組み立てたい時に',
+    roles:[{key:'hero',label:'主人公'},{key:'mentor',label:'導き手'},{key:'antagonist',label:'敵対者・障害'},{key:'ally',label:'協力者'}],
+    dans:[
+      {tag:'1',t:'安楽圏',turn:'主人公の日常と、そこにある欠乏を描く'},
+      {tag:'2',t:'欲求',turn:'主人公が何かを強く欲する'},
+      {tag:'3',t:'未知の世界へ',turn:'日常を離れ、未知の状況に踏み込む'},
+      {tag:'4',t:'適応と試練',turn:'新しい状況に適応しながら試練に直面する'},
+      {tag:'5',t:'獲得',turn:'欲したものを手に入れる、あるいは核心に触れる'},
+      {tag:'6',t:'代償を払う',turn:'獲得のために高い代償・犠牲を払う'},
+      {tag:'7',t:'帰路',turn:'日常へ戻る道を進み始める'},
+      {tag:'8',t:'変化した日常',turn:'変化を遂げた主人公が新しい日常を迎える'}
+    ]
+  },
+  '英雄の旅':{
+    category:'universal',
+    desc:'モノミス（ヴォグラー簡略版）。12段、最も「物語らしさ」が出る長編向きの型。',
+    good:'骨太な冒険譚・成長物語を書きたい時に',
+    roles:[{key:'hero',label:'主人公'},{key:'herald',label:'使者'},{key:'mentor',label:'賢者・導き手'},{key:'guardian',label:'境界の番人'},{key:'shapeshifter',label:'真意の読めない者'},{key:'shadow',label:'影（最大の敵対者）'},{key:'ally',label:'仲間・盟友'},{key:'trickster',label:'道化・トリックスター'}],
+    dans:[
+      {tag:'日常世界',t:'日常世界',turn:'主人公の日常と、その欠落を描く'},
+      {tag:'冒険への誘い',t:'冒険への誘い',turn:'使者が非日常への誘いをもたらす'},
+      {tag:'誘いの拒絶',t:'誘いの拒絶',turn:'主人公が恐れや義理から一度は誘いを拒む'},
+      {tag:'賢者との出会い',t:'賢者との出会い',turn:'導き手から助言・道具・力を授かる'},
+      {tag:'第一関門突破',t:'第一関門突破',turn:'境界の番人を越え、非日常の世界へ入る'},
+      {tag:'試練・仲間・敵',t:'試練、仲間、敵',turn:'新世界のルールを学び、仲間や敵対者と出会う'},
+      {tag:'最も危険な場所への接近',t:'最も危険な場所への接近',turn:'最大の試練に向けて準備を整える'},
+      {tag:'最大の試練',t:'最大の試練（死と再生）',turn:'生死に関わる最大の危機に直面し、これを乗り越える'},
+      {tag:'報酬',t:'報酬を手にする',turn:'危機を乗り越えた褒賞・悟りを得る'},
+      {tag:'帰路',t:'帰路につく',turn:'非日常の世界からの帰還を開始する'},
+      {tag:'復活',t:'復活',turn:'最後の試練を経て、主人公が真に変化する'},
+      {tag:'霊薬を持っての帰還',t:'霊薬を持っての帰還',turn:'得たものを日常世界に持ち帰り、世界に変化をもたらす'}
+    ]
+  }
+};
+// 全て category:'universal' の型は needsSolution/needsClue/needsTrick を持たない（=false扱い）
+
+var KATAS_MYSTERY={
+  '本格（フーダニット）':{
+    category:'mystery',needsSolution:true,needsClue:true,needsTrick:false,
+    desc:'犯行→捜査→複数容疑者→手がかり開示→探偵の推理→解決。フェアプレイ厳守の王道推理。',
+    good:'謎解きそのものを主役にしたい時に',
+    roles:[{key:'detective',label:'探偵役'},{key:'victim',label:'被害者'},{key:'culprit',label:'犯人（内部設定・最終段まで正体を伏せる）'},{key:'suspect',label:'容疑者（実は無実）'},{key:'watson',label:'助手・語り手役'}],
+    dans:[
+      {tag:'発端',t:'日常と事件前夜',turn:'舞台と登場人物を紹介し、後の事件の伏線となる違和感を静かに置く'},
+      {tag:'事件発生',t:'死体発見',turn:'事件が発覚し、探偵役が捜査に乗り出す'},
+      {tag:'捜査',t:'証言と手がかり①',turn:'容疑者たちへの聞き込みが始まり、最初の手がかりが示される'},
+      {tag:'深まる謎',t:'食い違う証言',turn:'新たな手がかりと、容疑者の嘘や矛盾が明らかになる'},
+      {tag:'推理',t:'探偵の推理',turn:'探偵が手がかりを整理し、犯人を指摘する論理を組み立てる'},
+      {tag:'解決',t:'真相',turn:'犯人の正体と動機・手段・機会が明かされ、事件が締めくくられる'}
+    ]
+  },
+  '倒叙（ハウキャッチェム）':{
+    category:'mystery',needsSolution:true,needsClue:true,needsTrick:false,revealFromStart:true,
+    desc:'犯人視点で犯行を先に見せ、捜査官がどう追い詰めるかを描く。コロンボ型。',
+    good:'「誰が」ではなく「どう暴かれるか」を書きたい時に',
+    roles:[{key:'culprit',label:'犯人（物語冒頭から視点人物として描かれる）'},{key:'detective',label:'追う側の捜査官'},{key:'victim',label:'被害者'},{key:'witness',label:'目撃者・関係者'}],
+    dans:[
+      {tag:'犯行前',t:'計画',turn:'犯人視点で、犯行に至る事情と計画を描く'},
+      {tag:'犯行',t:'決行と偽装',turn:'犯人視点で犯行を実行し、証拠を隠し偽装する'},
+      {tag:'捜査開始',t:'違和感',turn:'捜査官視点に転じ、些細な違和感に気づく'},
+      {tag:'追及',t:'証拠を積む',turn:'捜査官が一つずつ証拠を積み上げ、犯人に迫る'},
+      {tag:'対峙',t:'対峙',turn:'捜査官と犯人が直接対峙する'},
+      {tag:'破綻',t:'破綻',turn:'犯人が追い詰められ、真相が確定する'}
+    ]
+  },
+  '密室・不可能犯罪':{
+    category:'mystery',needsSolution:true,needsClue:true,needsTrick:true,
+    caution:'△ 段ごとの分割生成のため、トリックの物理的・時系列的整合性が崩れることがあります。生成後は必ずご自身で確認してください。',
+    desc:'物理的に不可能な状況の説明そのものが結末の核となる型。',
+    good:'密室・不可能状況のトリックを主役にしたい時に',
+    roles:[{key:'detective',label:'探偵役'},{key:'victim',label:'被害者'},{key:'culprit',label:'犯人（内部設定・最終段まで正体を伏せる）'},{key:'suspect',label:'容疑者（実は無実）'},{key:'watson',label:'助手・語り手役'}],
+    dans:[
+      {tag:'発端',t:'日常と事件前夜',turn:'舞台と登場人物、不可能状況の下地を紹介する'},
+      {tag:'不可能犯罪',t:'密室の発見',turn:'物理的に説明のつかない状況で事件が発覚する'},
+      {tag:'捜査',t:'証言と手がかり①',turn:'容疑者たちへの聞き込みと、状況の矛盾点の洗い出しが始まる'},
+      {tag:'深まる謎',t:'トリックへの手がかり',turn:'不可能状況を崩す糸口となる手がかりが示される'},
+      {tag:'推理',t:'推理とトリック解明',turn:'探偵が手がかりを整理し、トリックの仕掛けと犯人を指摘する'},
+      {tag:'解決',t:'真相',turn:'トリックの全貌と犯人の動機・機会が明かされ、事件が締めくくられる'}
+    ]
+  },
+  'ハードボイルド・ノワール':{
+    category:'mystery',needsSolution:false,needsClue:false,needsTrick:false,
+    desc:'探偵が腐敗した社会を彷徨う三幕構成寄りの型。パズルより雰囲気と道徳的曖昧さが軸。',
+    good:'謎解きの厳密さより、雰囲気と苦さを書きたい時に',
+    roles:[{key:'hero',label:'探偵役（一人称の語り手）'},{key:'antagonist',label:'黒幕・敵対者'},{key:'femme',label:'鍵を握る人物（真意の読めない存在）'},{key:'ally',label:'情報提供者・相棒'}],
+    dans:[
+      {tag:'依頼',t:'依頼',turn:'探偵のもとに一見単純な依頼が舞い込む'},
+      {tag:'調査',t:'調査と予感',turn:'調査を進めるうちに、事件の裏にきな臭さを感じ始める'},
+      {tag:'悪化',t:'裏切りと悪化',turn:'信じかけた相手の裏切りや暴力によって状況が悪化する'},
+      {tag:'接近',t:'真相への接近',turn:'黒幕の輪郭が見え始め、危険を承知で深追いする'},
+      {tag:'結末',t:'苦い結末',turn:'真相にたどり着くが、後味の良い解決とは限らない結末を迎える'}
+    ]
+  },
+  'コージーミステリ':{
+    category:'mystery',needsSolution:true,needsClue:true,needsTrick:false,
+    desc:'小さな共同体+素人探偵。構造は本格に近いが、暴力描写を抑えた低刺激な読み味。',
+    good:'謎解きを楽しみつつ、優しい読後感にしたい時に',
+    roles:[{key:'detective',label:'素人探偵役'},{key:'victim',label:'被害者'},{key:'culprit',label:'犯人（内部設定・最終段まで正体を伏せる）'},{key:'suspect',label:'容疑者（実は無実）'},{key:'watson',label:'相棒・語り手役'}],
+    dans:[
+      {tag:'発端',t:'小さな共同体の日常',turn:'村・商店街・サークルなど小さな共同体と登場人物を紹介する'},
+      {tag:'事件発生',t:'事件が起きる',turn:'共同体を揺るがす事件が起き、素人探偵が首を突っ込む'},
+      {tag:'捜査',t:'噂と手がかり①',turn:'井戸端の噂話や日常の観察から最初の手がかりを得る'},
+      {tag:'深まる謎',t:'意外な一面',turn:'身近な人物の意外な一面や矛盾が明らかになる'},
+      {tag:'推理',t:'素人探偵の推理',turn:'日常の観察眼から真相への糸口を掴む'},
+      {tag:'解決',t:'丸く収まる解決',turn:'事件が解決し、共同体に平穏が戻る（暴力描写は抑える）'}
+    ]
+  }
+};
+var KATAS_ROMANCE={
+  'ロマンティックコメディ型':{
+    category:'romance',needsRelation:true,needsHEA:true,
+    desc:'出会い→惹かれ合い→誤解・障害→ブラックモーメント→大逆転の告白→結ばれる。ジャンル恋愛小説の王道。',
+    good:'明るく前向きな恋愛物語を書きたい時に',
+    roles:[{key:'hero',label:'主人公'},{key:'love',label:'恋人役'},{key:'rival',label:'恋敵・障害となる人物'},{key:'confidant',label:'相談相手・親友'}],
+    dans:[
+      {tag:'出会い',t:'ミートキュート',turn:'主人公と恋人役が印象的な出会い方をする（諍い・偶然の重なりなど）'},
+      {tag:'惹かれ合い',t:'惹かれ合い',turn:'反発しつつも互いに惹かれていく過程を描く'},
+      {tag:'誤解・障害',t:'誤解と障害',turn:'恋敵や誤解、価値観の違いが二人の間に立ちはだかる'},
+      {tag:'ブラックモーメント',t:'破局寸前',turn:'すれ違いが決定的になり、関係が壊れかける最も暗い瞬間'},
+      {tag:'大逆転',t:'気づきと決意',turn:'本当の気持ちに気づき、行動を起こす決意をする'},
+      {tag:'結ばれる',t:'結ばれる',turn:'誤解が解け、二人が結ばれてハッピーエンドを迎える'}
+    ]
+  },
+  'スローバーン型':{
+    category:'romance',needsRelation:true,needsHEA:true,
+    desc:'既に近い関係にある二人が、長い時間をかけて想いに気づき結ばれていく型。',
+    good:'じっくり育つ恋愛を書きたい時に',
+    roles:[{key:'hero',label:'主人公'},{key:'love',label:'相手役'},{key:'confidant',label:'見守る周囲の人物'}],
+    dans:[
+      {tag:'日常',t:'同じ場所にいる二人',turn:'主人公と相手役が既に近い関係（同僚・幼馴染等）にあることを描く'},
+      {tag:'小さな変化',t:'意識し始める',turn:'何気ない瞬間に、相手を異性として意識し始める'},
+      {tag:'距離が縮まる',t:'距離が縮まる',turn:'二人だけの時間や秘密が増え、関係が少しずつ深まる'},
+      {tag:'自覚の遅れ',t:'気づかないふり',turn:'気持ちに気づきながらも、関係を壊すことを恐れて認めようとしない'},
+      {tag:'障害',t:'外部からの障害',turn:'第三者の存在や環境の変化が二人の関係を脅かす'},
+      {tag:'危機',t:'すれ違いの頂点',turn:'言葉にしなかった想いのすれ違いが限界に達する'},
+      {tag:'告白',t:'ようやくの告白',turn:'長い時間を経てようやく想いを言葉にする'},
+      {tag:'結ばれる',t:'結ばれた日常',turn:'想いが通じ合い、新しい関係としての日常が始まる'}
+    ]
+  },
+  '再会・セカンドチャンス型':{
+    category:'romance',needsRelation:true,needsHEA:true,
+    desc:'かつての恋人との再会から、過去の傷と向き合い今度こそ結ばれる型。',
+    good:'過去の因縁がある二人を書きたい時に',
+    roles:[{key:'hero',label:'主人公'},{key:'love',label:'かつての恋人・再会相手'},{key:'obstacle',label:'過去の傷・障害となる事情'}],
+    dans:[
+      {tag:'再会',t:'思いがけない再会',turn:'かつての恋人と偶然、あるいは必然的に再会する'},
+      {tag:'過去の影',t:'過去の傷',turn:'かつて別れた理由・傷が蘇り、ぎこちない空気が流れる'},
+      {tag:'再接近',t:'少しずつ近づく',turn:'仕事や環境の必要から関わりが増え、当時の想いが疼き始める'},
+      {tag:'向き合う',t:'過去と向き合う',turn:'別れの理由となった誤解や事情に、正面から向き合う'},
+      {tag:'危機',t:'再び訪れる危機',turn:'過去と同じ過ちを繰り返しそうになる、あるいは新たな障害が生じる'},
+      {tag:'再結合',t:'今度こそ',turn:'過去を乗り越え、今度こそ本当の関係を築く決意をする'}
+    ]
+  },
+  'すれ違い悲恋型':{
+    category:'romance',needsRelation:true,needsHEA:false,tragicAllowed:true,
+    desc:'身分・戦争・死・因習など、二人の意思では動かせない力に引き裂かれる型。HEAを前提としない。',
+    good:'切なさ・悲恋を書きたい時に',
+    roles:[{key:'hero',label:'主人公'},{key:'love',label:'恋人役'},{key:'force',label:'二人を引き裂く外的な力（身分・戦争・死・因習など）'}],
+    dans:[
+      {tag:'出会い',t:'出会い',turn:'身分や境遇の異なる二人が出会う'},
+      {tag:'愛の深まり',t:'愛の深まり',turn:'周囲を気にしながらも、想いを深めていく'},
+      {tag:'外的な力',t:'立ちはだかるもの',turn:'身分・戦争・因習など、二人の意思では動かせない力が立ちはだかる'},
+      {tag:'抗い',t:'抗う二人',turn:'それでも一緒にいようと二人が抗おうとする'},
+      {tag:'引き裂かれる',t:'引き裂かれる',turn:'外的な力に抗いきれず、二人が引き裂かれる'},
+      {tag:'余韻',t:'残されたもの',turn:'別れた後に残る想いや記憶が描かれる。必ずしも救いのある結末とは限らない'}
+    ]
+  },
+  '純文学型（余情の物語）':{
+    category:'romance',needsRelation:true,needsHEA:false,ambiguousEnding:true,indirectStyle:true,
+    desc:'日本の純文学に見られる恋愛の型。告白や劇的対決を避け、間接的な描写と余韻で想いを示す。成就も破局も明言しない。',
+    good:'静謐で余韻を残す、文学的な恋愛小説を書きたい時に',
+    roles:[{key:'hero',label:'語り手（多くは回想する一人称）'},{key:'love',label:'相手役'},{key:'time',label:'時の経過・季節（心情の象徴として機能する）'}],
+    dans:[
+      {tag:'出会い',t:'偶然の交差',turn:'運命的にではなく、偶然に近い形で相手と出会う'},
+      {tag:'言葉にならない想い',t:'言葉にならない想い',turn:'直接的な告白を避け、些細な仕草や沈黙、季節の情景で想いが示される'},
+      {tag:'内面の隔たり',t:'内面・社会的な隔たり',turn:'劇的な事件ではなく、内面の迷いや社会的立場の違いが二人を隔てる'},
+      {tag:'気づきと喪失',t:'気づきと喪失',turn:'些細な瞬間に本当の想いに気づくが、同時に何かを失うことを悟る'},
+      {tag:'余韻',t:'余韻の結び',turn:'成就とも破局ともつかない、静かな余韻を残して物語が結ばれる。回想する語り手の距離感を保つ'}
+    ]
+  }
+};
+var ALL_KATAS={};
+Object.keys(KATAS_UNIVERSAL).forEach(function(k){ ALL_KATAS[k]=KATAS_UNIVERSAL[k]; });
+Object.keys(KATAS_MYSTERY).forEach(function(k){ ALL_KATAS[k]=KATAS_MYSTERY[k]; });
+Object.keys(KATAS_ROMANCE).forEach(function(k){ ALL_KATAS[k]=KATAS_ROMANCE[k]; });
+function needsCase(){ var k=ALL_KATAS[selKata]; return !!(k&&(k.needsSolution||k.needsRelation)); }
+function findRoleName(key){
+  if(!castTable) return '';
+  var f=castTable.cast.filter(function(c){return c.role_key===key;})[0];
+  return f?f.name:'';
+}
+
+var GENDER_OPTS=['問わない','男性','女性','中性・不定'];
+var BEING_OPTS=['人間','人間以外（AI・動物・精霊等）'];
+var ERA_OPTS=['無国籍（架空の時代）','現代','近未来','自由指定'];
+var PLACE_OPTS=['無国籍（架空の土地）','日本','海外ムード（地域名は伏せる）','異世界'];
+var LENGTH_OPTS=['短編','中編','長編'];
+var LENGTH_PLAN={'短編':450,'中編':800,'長編':1300};
+var TONE_OPTS=['王道','ダーク寄り','コメディ寄り','静謐・詩的','土俗ホラー寄り（因習・旧家）'];
+
+// ── State ──
+var cu=null,busy=false;
+var mode='A';
+var selKata=null;
+var heroName='',heroGender='問わない',heroBeing='人間';
+var era='無国籍（架空の時代）',place='無国籍（架空の土地）',length='中編',tone='王道';
+var castTable=null;   // {cast:[{role_key,role_label,name,description}]}
+var solutionTable=null; // {motive,method,opportunity,summary} ミステリ型のみ
+var clueTable=null;     // {clues:[{clue_no,description,reveal_dan}]} ミステリ型のみ
+var trickTable=null;    // {trick_summary,mechanism,timeline:[{time,event}]} 密室型のみ
+var relationTable=null; // {attraction,obstacle,turning_point,ending_note} 恋愛小説型のみ
+var rulesTable=null;  // {summary,worldbuild:[{category,detail}]}
+var kosei=null;       // {title,dans:[{no,tag,title,goal}]}
+var honmon=[];        // [{dan_title,body}]
+var workId=null;
+var vertical=false;
+var lyricsData=null; // {sections:[{section_key,lines:[...]}]}
+var lyricSectionsOn={intro:true,a:true,b:true,c:false,sabi:true,outro:true};
+var LYRIC_SECTIONS=[
+  {key:'intro',name:'イントロ',tag:'Intro'},
+  {key:'a',name:'Aメロ',tag:'Verse 1'},
+  {key:'b',name:'Bメロ',tag:'Verse 2'},
+  {key:'c',name:'Cメロ（任意）',tag:'Bridge'},
+  {key:'sabi',name:'サビ',tag:'Chorus'},
+  {key:'outro',name:'アウトロ',tag:'Outro'}
+];
+
+// ══════ API（rakugo系と共通の呼び出し規約） ══════
+async function callAI(prompt,schema){
+  var body={prompt:prompt,model:'gemini-2.5-flash'};
+  if(schema) body.responseSchema=schema;
+  var r=await fetch(FUNC_BASE+'/askAI',{method:'POST',headers:{'Content-Type':'application/json','x-access-key':ACCESS_KEY},body:JSON.stringify(body)});
+  if(!r.ok) throw new Error('API '+r.status);
+  var d=await r.json();
+  if(d&&d.success===false) throw new Error(d.error||'APIエラー');
+  return (d&&d.data&&d.data.candidates&&d.data.candidates[0]&&d.data.candidates[0].content&&d.data.candidates[0].content.parts&&d.data.candidates[0].content.parts[0]&&d.data.candidates[0].content.parts[0].text)
+    ||(d&&d.data&&d.data.text)
+    ||(d&&d.candidates&&d.candidates[0]&&d.candidates[0].content&&d.candidates[0].content.parts&&d.candidates[0].content.parts[0]&&d.candidates[0].content.parts[0].text)
+    ||(d&&d.text)||'';
+}
+async function callJSON(prompt,schema){
+  var raw=await callAI(prompt,schema);
+  try{ return JSON.parse(String(raw).replace(/```json|```/g,'').trim()); }
+  catch(e){ return null; }
+}
+function sanitizeRunaway(text){
+  if(!text) return text;
+  var m=text.match(/(.{1,6}?)\1{9,}/);
+  if(!m) return text;
+  var idx=text.indexOf(m[0]);
+  return text.slice(0,idx).replace(/[\s、。！？」』\)\]]*$/,'');
+}
+async function callJSONRetry(prompt,schema,minKey,minLen){
+  var antiRepeat='\n\n※厳守：同じ文字・語句・記号を連続して繰り返し書かないこと。JSONを書き終えたらそこで筆を置くこと。';
+  var best=null;
+  for(var attempt=0;attempt<3;attempt++){
+    var obj=await callJSON(attempt===0?prompt:prompt+antiRepeat,schema);
+    if(obj){
+      if(minKey&&typeof obj[minKey]==='string'){
+        obj[minKey]=sanitizeRunaway(obj[minKey]);
+        if(obj[minKey]&&obj[minKey].length>=(minLen||100)) return obj;
+        if(!best||((obj[minKey]||'').length>((best[minKey]||'').length))) best=obj;
+      }else{ return obj; }
+    }
+  }
+  return best;
+}
+
+// ══════ SCHEMAS ══════
+var SCHEMA_CAST={type:'OBJECT',properties:{
+  cast:{type:'ARRAY',items:{type:'OBJECT',properties:{
+    role_key:{type:'STRING'},role_label:{type:'STRING'},name:{type:'STRING'},description:{type:'STRING'}
+  },required:['role_key','name']}}
+},required:['cast']};
+
+var SCHEMA_RULES={type:'OBJECT',properties:{
+  summary:{type:'STRING'},
+  worldbuild:{type:'ARRAY',items:{type:'OBJECT',properties:{
+    category:{type:'STRING'},detail:{type:'STRING'}
+  },required:['category','detail']}}
+},required:['summary','worldbuild']};
+
+var SCHEMA_SOLUTION={type:'OBJECT',properties:{
+  motive:{type:'STRING'},method:{type:'STRING'},opportunity:{type:'STRING'},summary:{type:'STRING'}
+},required:['motive','method','opportunity','summary']};
+
+var SCHEMA_TRICK={type:'OBJECT',properties:{
+  trick_summary:{type:'STRING'},mechanism:{type:'STRING'},
+  timeline:{type:'ARRAY',items:{type:'OBJECT',properties:{
+    time:{type:'STRING'},event:{type:'STRING'}
+  },required:['time','event']}}
+},required:['trick_summary','mechanism','timeline']};
+
+var SCHEMA_CLUES={type:'OBJECT',properties:{
+  clues:{type:'ARRAY',items:{type:'OBJECT',properties:{
+    clue_no:{type:'INTEGER'},description:{type:'STRING'},reveal_dan:{type:'INTEGER'}
+  },required:['description','reveal_dan']}}
+},required:['clues']};
+
+var SCHEMA_RELATION={type:'OBJECT',properties:{
+  attraction:{type:'STRING'},obstacle:{type:'STRING'},turning_point:{type:'STRING'},ending_note:{type:'STRING'}
+},required:['attraction','obstacle','turning_point']};
+
+var SCHEMA_KOSEI={type:'OBJECT',properties:{
+  title:{type:'STRING'},
+  dans:{type:'ARRAY',items:{type:'OBJECT',properties:{
+    no:{type:'INTEGER'},tag:{type:'STRING'},title:{type:'STRING'},goal:{type:'STRING'}
+  },required:['no','title','goal']}}
+},required:['title','dans']};
+
+var SCHEMA_SOLO={type:'OBJECT',properties:{
+  dan_title:{type:'STRING'},body:{type:'STRING'}
+},required:['dan_title','body']};
+
+var SCHEMA_LYRICS={type:'OBJECT',properties:{
+  sections:{type:'ARRAY',items:{type:'OBJECT',properties:{
+    section_key:{type:'STRING'},
+    lines:{type:'ARRAY',items:{type:'STRING'}}
+  },required:['section_key','lines']}}
+},required:['sections']};
+
+// ══════ PROMPTS ══════
+function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function heroDescCombined(){
+  var parts=[];
+  if(heroGender!=='問わない') parts.push(heroGender);
+  if(heroBeing!=='人間') parts.push(heroBeing);
+  var free=(document.getElementById('heroFreeDesc')&&document.getElementById('heroFreeDesc').value.trim())||'';
+  if(free) parts.push(free);
+  return parts.length?parts.join('、'):'（特に指定なし。自由に設定してよい）';
+}
+function eraText(){
+  if(era==='自由指定'){ var v=(document.getElementById('eraFreeIn')&&document.getElementById('eraFreeIn').value.trim())||''; return v||'（指定なし。自由に設定してよい）'; }
+  return era;
+}
+function commonHead(withCast,withRules,withCase){
+  var k=ALL_KATAS[selKata];
+  var h='【物語の骨格】'+selKata+'（全'+k.dans.length+'段構成）\n';
+  h+='【主人公】'+(heroName||'（名前は本文中でAIが自由に決めてよい）')+'\n設定：'+heroDescCombined()+'\n';
+  var hint=(document.getElementById('premiseHint')&&document.getElementById('premiseHint').value.trim())||'';
+  h+='【物語の種（ヒント）】'+(hint||'特に指定なし。骨格と主人公設定から自由に発想してよい。')+'\n';
+  h+='【時代】'+eraText()+'\n【場所】'+place+(place==='海外ムード（地域名は伏せる）'?'（実在の国名・民族名・具体的地名は出さず、地理的・気候的な雰囲気のみで描写すること）':'')+'\n';
+  h+='【トーン】'+tone+'\n';
+  if(withCast&&castTable){ h+='【配役表】\n'+castTable.cast.map(function(c){return '・'+(c.role_label||c.role_key)+'＝'+c.name+'：'+(c.description||'');}).join('\n')+'\n'; }
+  if(withRules&&rulesTable){ h+='【世界観ルール】'+rulesTable.summary+'\n'+rulesTable.worldbuild.map(function(w){return '・'+w.category+'：'+w.detail;}).join('\n')+'\n'; }
+  if(withCase&&solutionTable){
+    h+='【事件の核（内部設定・指定の段まで文中で正体を明かさないこと）】\n犯人：'+findRoleName('culprit')+'\n動機：'+solutionTable.motive+'\n手段：'+solutionTable.method+'\n機会：'+solutionTable.opportunity+'\n概要：'+solutionTable.summary+'\n';
+    if(trickTable){ h+='トリックの仕掛け：'+trickTable.mechanism+'\n'; }
+  }
+  if(withCase&&relationTable){
+    h+='【関係性の核】\n惹かれる理由：'+relationTable.attraction+'\n二人を隔てるもの：'+relationTable.obstacle+'\n転機となる出来事：'+relationTable.turning_point+'\n';
+    if(relationTable.ending_note) h+='結末の方向性：'+relationTable.ending_note+'\n';
+  }
+  return h;
+}
+function castPrompt(){
+  var k=ALL_KATAS[selKata];
+  return 'あなたは物語の配役設計AIです。以下の骨格が持つ「機能役割」に、具体的な登場人物を割り当ててください。\n\n'
+    +commonHead(false,false,false)
+    +'\n【この骨格の機能役割】\n'+k.roles.map(function(r){return r.label+'（role_key: '+r.key+'）';}).join('\n')
+    +'\n\n【指示】\n・各役割にふさわしい名前(name)と一言設定(description、40字程度)を考える。\n'
+    +'・hero役の名前は「'+(heroName||'あなたが自由に決めてよい')+'」とする。\n'
+    +'・時代・場所の設定に合った名前にする（無国籍・架空設定の場合は特定の実在国・民族を想起させない名前にする）。\n'
+    +'・role_labelには渡された役割名をそのまま入れる。\n・JSONのみ返答。';
+}
+function rulesPrompt(){
+  return 'あなたは世界観設計AIです。指定された時代・場所の設定に基づき、物語全体を通して一貫させるための世界観ルール（設定資料）を作ってください。\n\n'
+    +commonHead(true,false,false)
+    +'\n【指示】\n・以下6項目についてそれぞれ1〜2行で設定を決める：通貨／身分・社会構造／移動手段／通信手段／固有名詞の命名スタイル／服装・道具。\n'
+    +'・無国籍・架空設定の場合は、実在の特定国・地域・民族を特定できる要素を避けること。\n'
+    +'・summaryに世界観全体の雰囲気を2〜3行で要約する。\n・JSONのみ返答。';
+}
+function solutionPrompt(){
+  var k=ALL_KATAS[selKata];
+  return 'あなたはミステリの犯罪設計AIです。この物語の「解決」をただ一つだけ確定してください。これは物語の背骨であり、以降のすべての段はこの内容と絶対に矛盾してはいけません。\n\n'
+    +commonHead(true,false,false)
+    +'\n【犯人役】'+(findRoleName('culprit')||'（配役表の犯人役）')
+    +'\n\n【指示】\n・動機(motive)・手段(method)・機会(opportunity)を具体的に決める。\n'
+    +'・summaryに事件の全体像（何が起き、どう解決するか）を3〜4行でまとめる。\n'
+    +(k.revealFromStart?'・この型は倒叙のため、犯人は物語冒頭から読者に明かされる前提で内容を決めてよい。\n':'・この内容は最終段の解決まで文中で明かされない前提で決める。\n')
+    +'・JSONのみ返答。';
+}
+function trickPrompt(){
+  return 'あなたは密室・不可能犯罪のトリック設計AIです。物理的・時系列的に矛盾のない仕掛けを1つだけ確定してください。\n\n'
+    +commonHead(true,false,true)
+    +'\n【指示】\n・trick_summaryに仕掛けの要点を2〜3行で。\n・mechanismに仕掛けの具体的な機構・手順を詳しく書く。\n'
+    +'・timelineに事件当夜の時刻と出来事を時系列で並べ、矛盾がないようにする（5〜8項目程度）。\n・JSONのみ返答。';
+}
+function cluePrompt(){
+  var k=ALL_KATAS[selKata];
+  var dansText=k.dans.map(function(d,i){return (i+1)+'.'+d.t;}).join('\n');
+  return 'あなたはミステリの手がかり設計AIです。以下の解決を、読者がフェアに推理できるよう、段ごとに開示する手がかりの計画を作ってください。\n\n'
+    +commonHead(true,false,true)
+    +'\n【段構成（全'+k.dans.length+'段）】\n'+dansText
+    +'\n\n【指示】\n・手がかりを5〜8個作り、それぞれどの段(reveal_dan、1〜'+k.dans.length+'の整数)で開示するかを割り振る。\n'
+    +'・探偵役が真相を指摘する段より前に、読者が推理に必要な手がかりが出揃うようにする。\n'
+    +(k.revealFromStart?'・この型は倒叙のため、手がかりは「捜査官が犯人に迫るための証拠」として設計する。\n':'')
+    +'・JSONのみ返答。';
+}
+function relationPrompt(){
+  var k=ALL_KATAS[selKata];
+  var endingRule=k.needsHEA?'この型はハッピーエンド（HEA/HFN）が前提。二人が結ばれる方向でending_noteを考える。'
+    :k.tragicAllowed?'この型は悲恋が前提。必ずしも二人が結ばれない結末でending_noteを考えてよい。'
+    :'この型は成就とも破局とも言い切らない、余韻を残す結末が前提。ending_noteも断定を避けた書き方にする。';
+  return 'あなたは恋愛小説の関係性設計AIです。この物語を通して二人の関係がどう変化するかの核を、最初に一つだけ確定してください。以降のすべての段はこの内容と矛盾してはいけません。\n\n'
+    +commonHead(true,false,false)
+    +'\n【指示】\n・attraction：主人公が相手役に惹かれる具体的な理由。\n・obstacle：二人を隔てるもの（誤解・身分・過去・内面の迷いなど）。\n'
+    +'・turning_point：関係が大きく動く具体的な出来事。\n・ending_note：'+endingRule+'\n・JSONのみ返答。';
+}
+function cluesForDan(danNo){
+  if(!clueTable) return '';
+  var arr=clueTable.clues.filter(function(c){return c.reveal_dan===danNo;}).map(function(c){return c.description;});
+  return arr.length?arr.join('／'):'';
+}
+function koseiSummary(){
+  return kosei.dans.map(function(d){return d.no+'.【'+(d.tag||'')+'】'+d.title+'：'+d.goal;}).join('\n');
+}
+function koseiPrompt(){
+  var k=ALL_KATAS[selKata];
+  var kataText=k.dans.map(function(d,i){return (i+1)+'.【'+d.tag+'】'+d.t+'——'+d.turn;}).join('\n');
+  return 'あなたは物語の構成作家AIです。骨格の各段（機能）を、この物語の具体的な出来事に落とし込んだ構成案を作ってください。\n\n'
+    +commonHead(true,true,needsCase())
+    +'\n【この骨格の各段（機能）】\n'+kataText
+    +'\n\n【指示】\n・全'+k.dans.length+'段、各段に番号(no)・機能区分(tag)・この物語独自の見出し(title)・その段で起きる具体的な出来事(goal、80字以内)を書く。\n'
+    +'・各段の機能を、配役表・世界観ルールに沿った具体的な出来事に変換すること。骨格の抽象的な名前をtitleにそのまま使わない。\n'
+    +'・全'+k.dans.length+'段を通して一つの物語として一貫性を保つこと。\n・JSONのみ返答。';
+}
+function prevContext(idx){
+  if(idx===0) return '（最初の段です）';
+  var p=honmon[idx-1];
+  return '直前の段の末尾：\n…'+String(p.body||'').slice(-220);
+}
+function danPrompt(idx){
+  var d=kosei.dans[idx];
+  var caseNote='';
+  if(needsCase()){
+    var k=ALL_KATAS[selKata];
+    if(k.category==='mystery'){
+      if(k.revealFromStart){
+        caseNote='・この型は倒叙のため、犯人の正体は読者にとって既知として書いてよい。焦点は「いかに追い詰められるか」である。\n';
+      }else if(idx===k.dans.length-1){
+        caseNote='・この最終段で、事件の真相（犯人・動機・手段・機会'+(trickTable?'・トリックの仕掛け':'')+'）を明確に開示し、謎を解決すること。\n';
+      }else{
+        var c=cluesForDan(idx+1);
+        caseNote='・犯人の正体はまだ明かさないこと。'+(c?'この段では次の手がかりをさりげなく本文中に描写すること：'+c+'\n':'\n');
+      }
+    }else if(k.category==='romance'){
+      if(idx===k.dans.length-1){
+        if(k.needsHEA){ caseNote='・この最終段で、二人の想いが通じ合うハッピーエンド（HEA/HFN）として明確に結ぶこと。\n'; }
+        else if(k.tragicAllowed){ caseNote='・この最終段で、二人が引き裂かれた後に残るものを描く。必ずしも救いのある結末にしなくてよい。\n'; }
+        else if(k.ambiguousEnding){ caseNote='・この最終段は、成就とも破局ともつかない余韻を残す結び方にすること。直接的な結論や説明を避け、情景描写や沈黙で締めくくる。\n'; }
+      }else{
+        caseNote='・関係性の核（惹かれる理由・二人を隔てるもの・転機）を踏まえ、この段階にふさわしい二人の距離感を描くこと。\n';
+      }
+      if(k.indirectStyle){
+        caseNote+='・感情を直接的なセリフや説明で述べず、仕草・沈黙・季節や情景の描写で示すこと。語り手は過去を振り返る一人称の距離感を保つこと。\n';
+      }
+    }
+  }
+  return 'あなたは小説家AIです。以下の構成案に沿って、物語本文を執筆してください。地の文と会話文を織り交ぜた小説形式で書きます。\n\n'
+    +commonHead(true,true,needsCase())
+    +'\n【全体の構成】\n'+koseiSummary()
+    +'\n\n【今回書く段】第'+(idx+1)+'段「'+d.title+'」\nこの段で起きること：'+d.goal
+    +'\n\n'+prevContext(idx)
+    +'\n\n【指示】\n・この段の本文をおよそ'+LENGTH_PLAN[length]+'字で書く。\n・dan_title は「'+d.title+'」のままとする。\n'
+    +'・前の段と自然につながる書き出しにする。前の筋を要約し直さないこと。\n'+caseNote+'・JSONのみ返答。';
+}
+
+// ══════ 歌詞を起こす(P7→pLyrics) ══════
+function activeLyricSecs(){ return LYRIC_SECTIONS.filter(function(s){ return lyricSectionsOn[s.key]; }); }
+function lyricsPrompt(){
+  var secs=activeLyricSecs();
+  var secText=secs.map(function(s){return s.key+'（'+s.name+'）';}).join('、');
+  return 'あなたは作詞家AIです。以下の物語から、Suno AIの歌詞欄にそのまま貼り付けられる歌詞の下書きを作ってください。地の文の要約ではなく、歌える言葉・比喩・情景で書くこと。\n\n'
+    +'【物語】'+((kosei&&kosei.title)||'')+'\n'+(kosei?koseiSummary():'')
+    +'\n\n【使うセクション】'+secText
+    +'\n\n【指示】\n・イントロ／アウトロは2行程度、Aメロ／Bメロ／Cメロは4〜6行、サビは4行程度（覚えやすい一行＝フックを必ず含める）。\n'
+    +'・物語のテーマと感情の起伏を歌詞に落とし込む。固有名詞は必要な場合のみ使う。\n'
+    +'・全セクション合計で3000文字以内に収まるよう簡潔にする。\n・JSONのみ返答。';
+}
+function showLyrics(){
+  if(!kosei||!honmon.length){ alert('先に物語を生成してください。'); return; }
+  for(var i=0;i<=7;i++){ var el=document.getElementById('p'+i); if(el) el.classList.remove('show'); }
+  document.getElementById('pCase').classList.remove('show');
+  document.getElementById('pLyrics').classList.add('show');
+  renderLyricToggles();
+  if(lyricsData) renderLyricsView();
+}
+function hideLyrics(){ document.getElementById('pLyrics').classList.remove('show'); goP(7); }
+function renderLyricToggles(){
+  var box=document.getElementById('lyricSectionToggles');
+  box.innerHTML=LYRIC_SECTIONS.map(function(s){
+    return '<label class="sect-toggle" style="display:flex;align-items:center;gap:9px;padding:9px 11px;background:var(--card);border:1px solid var(--border);border-radius:9px;margin-bottom:6px;">'
+      +'<input type="checkbox" '+(lyricSectionsOn[s.key]?'checked':'')+' onchange="toggleLyricSection(\''+s.key+'\',this.checked)">'
+      +'<span style="font-size:13px;font-weight:700;flex:1;">'+esc(s.name)+'</span>'
+      +'<span class="lsc-tag">'+esc(s.tag)+'</span></label>';
+  }).join('');
+}
+function toggleLyricSection(key,checked){ lyricSectionsOn[key]=checked; }
+async function genLyrics(){
+  if(busy) return; busy=true;
+  var note=document.getElementById('lyricsNote');
+  document.getElementById('btnLyrics').disabled=true; document.getElementById('btnReLyrics').disabled=true;
+  note.innerHTML='<span class="spin">⏳</span> 作詞家AIが歌詞を起こしています…';
+  try{
+    var obj=await callJSONRetry(lyricsPrompt(),SCHEMA_LYRICS);
+    if(!obj||!obj.sections||!obj.sections.length) throw new Error('歌詞の生成に失敗');
+    lyricsData=obj;
+    renderLyricsView();
+    note.textContent='歌詞ができました。各行は自由に書き換えられます。';
+    document.getElementById('btnLyrics').style.display='none';
+    document.getElementById('btnReLyrics').style.display='block';
+    document.getElementById('lyricsOutBar').style.display='flex';
+  }catch(e){ note.textContent='生成に失敗しました。もう一度お試しください。（'+e.message+'）'; }
+  busy=false;
+  document.getElementById('btnLyrics').disabled=false; document.getElementById('btnReLyrics').disabled=false;
+}
+function renderLyricsView(){
+  var v=document.getElementById('lyricsView');
+  if(!lyricsData){ v.innerHTML=''; return; }
+  var secs=activeLyricSecs();
+  v.innerHTML=secs.map(function(s){
+    var sec=(lyricsData.sections||[]).filter(function(x){return x.section_key===s.key;})[0];
+    var text=sec?sec.lines.join('\n'):'';
+    return '<div class="lyric-sec-card"><div class="lsc-hd"><span class="lsc-name">'+esc(s.name)+'</span><span class="lsc-tag">'+esc(s.tag)+'</span></div>'
+      +'<textarea class="lsc-in" oninput="updateLyricSection(\''+s.key+'\',this.value)">'+esc(text)+'</textarea></div>';
+  }).join('');
+  updateLyricsCharCount();
+}
+function updateLyricSection(key,val){
+  if(!lyricsData) return;
+  var sec=(lyricsData.sections||[]).filter(function(x){return x.section_key===key;})[0];
+  var lines=val.split('\n');
+  if(sec){ sec.lines=lines; } else { lyricsData.sections.push({section_key:key,lines:lines}); }
+  updateLyricsCharCount();
+}
+function lyricsText(){
+  var secs=activeLyricSecs();
+  var out=secs.map(function(s){
+    var sec=lyricsData?(lyricsData.sections||[]).filter(function(x){return x.section_key===s.key;})[0]:null;
+    var lines=sec?sec.lines:[];
+    return '['+s.tag+']\n'+lines.join('\n');
+  }).join('\n\n');
+  return out.trim();
+}
+function updateLyricsCharCount(){
+  var len=lyricsText().length;
+  var el=document.getElementById('lyricsCharCount');
+  if(el){ el.textContent=len+' / 3000文字（Suno歌詞欄の上限）'; el.className='charcount'+(len>3000?' over':''); }
+}
+function copyLyrics(){
+  var t=lyricsText();
+  if(!t){ alert('先に歌詞を起こしてください。'); return; }
+  copyText(t,'歌詞');
+}
+
+// ══════ PHASE NAV ══════
+function goP(n){
+  document.getElementById('pCase').classList.remove('show');
+  document.getElementById('pLyrics').classList.remove('show');
+  var psc=document.getElementById('psCase');
+  psc.classList.remove('active');
+  if(n>=5) psc.classList.add('done'); else psc.classList.remove('done');
+  for(var i=0;i<=7;i++){
+    var el=document.getElementById('p'+i);
+    if(el) el.classList.remove('show');
+    var ps=document.getElementById('ps'+i);
+    if(ps){ ps.classList.remove('active','done'); if(i===n) ps.classList.add('active'); else if(i<n&&i>=1) ps.classList.add('done'); }
+  }
+  var t=document.getElementById('p'+n);
+  if(t) t.classList.add('show');
+  if(n===0) loadWorks();
+}
+function showCase(){
+  for(var i=0;i<=7;i++){
+    var el=document.getElementById('p'+i);
+    if(el) el.classList.remove('show');
+    var ps=document.getElementById('ps'+i);
+    if(ps) ps.classList.remove('active');
+  }
+  document.getElementById('psCase').classList.remove('done');
+  document.getElementById('psCase').classList.add('active');
+  document.getElementById('pCase').classList.add('show');
+}
+function goAfterCast(){
+  if(needsCase()){ resetCasePhase(); showCase(); }
+  else{ goP5(); }
+}
+function goBackFromRules(){
+  if(needsCase()){ showCase(); }
+  else{ goP(4); }
+}
+
+// ══════ AUTH ══════
+function initAuth(){
+  if(!window.__fw){ window.addEventListener('fbReady',initAuth,{once:true}); return; }
+  window.__fw.onAuthStateChanged(window.__fw.auth,function(user){
+    if(user){ cu=user; document.getElementById('loginScreen').classList.remove('active'); document.getElementById('appHd').style.display='flex'; document.getElementById('phaseBar').style.display='block'; goP(0); }
+    else { cu=null; document.getElementById('loginScreen').classList.add('active'); document.getElementById('appHd').style.display='none'; document.getElementById('phaseBar').style.display='none'; }
+  });
+}
+async function doLogin(){
+  var em=document.getElementById('dEmail').value.trim(),pw=document.getElementById('dPass').value;
+  var err=document.getElementById('dErr'); err.textContent='';
+  try{ await window.__fw.signInWithEmailAndPassword(window.__fw.auth,em,pw); }
+  catch(e){ err.textContent='ログインできません。メールとパスワードをご確認ください。'; }
+}
+async function doLogout(){ if(!confirm('退出しますか？'))return; await window.__fw.signOut(window.__fw.auth); }
+
+// ══════ P0 保存済み一覧 ══════
+async function loadWorks(){
+  var box=document.getElementById('worksList');
+  if(!cu||!window.__fw){ box.innerHTML='<div class="works-empty">—</div>'; return; }
+  try{
+    var fw=window.__fw;
+    var snap=await fw.getDocs(fw.query(fw.collection(fw.db,'myth_engine/'+cu.uid+'/works'),fw.orderBy('updatedAt','desc')));
+    if(snap.empty){ box.innerHTML='<div class="works-empty">まだ物語はありません。上のボタンから始めてください。</div>'; return; }
+    var html='';
+    snap.forEach(function(docu){
+      var w=docu.data();
+      html+='<div class="work-item" onclick="loadWork(\''+docu.id+'\')"><span>🌀</span><span class="wi-title">'+esc(w.title||'（無題）')+'</span><span class="wi-meta">'+esc(w.selKata||'')+'・'+esc(w.length||'')+'</span></div>';
+    });
+    box.innerHTML=html;
+  }catch(e){ box.innerHTML='<div class="works-empty">読み込みに失敗しました。</div>'; }
+}
+async function loadWork(id){
+  try{
+    var fw=window.__fw;
+    var d=await fw.getDoc(fw.doc(fw.db,'myth_engine/'+cu.uid+'/works/'+id));
+    if(!d.exists()) return;
+    var w=d.data();
+    workId=id;
+    selKata=w.selKata; heroName=w.heroName||''; heroGender=w.heroGender||'問わない'; heroBeing=w.heroBeing||'人間';
+    era=w.era||'無国籍（架空の時代）'; place=w.place||'無国籍（架空の土地）'; length=w.length||'中編'; tone=w.tone||'王道';
+    castTable=w.castTable||null; rulesTable=w.rulesTable||null; kosei=w.kosei||null; honmon=w.honmon||[];
+    solutionTable=w.solutionTable||null; clueTable=w.clueTable||null; trickTable=w.trickTable||null;
+    relationTable=w.relationTable||null;
+    renderScript();
+    goP(7);
+  }catch(e){ alert('読み込みに失敗しました。'); }
+}
+function startNew(){
+  mode='A';selKata=null;heroName='';heroGender='問わない';heroBeing='人間';
+  era='無国籍（架空の時代）';place='無国籍（架空の土地）';length='中編';tone='王道';
+  castTable=null;solutionTable=null;clueTable=null;trickTable=null;relationTable=null;rulesTable=null;kosei=null;honmon=[];workId=null;vertical=false;
+  goP(1);
+}
+function pickMode(m){ mode=m; renderKataGrid(); }
+
+// ══════ P2 骨格選択 ══════
+function kataCardHtml(name){
+  var k=ALL_KATAS[name];
+  var cls=(selKata===name)?'kata-card sel':'kata-card';
+  var badges='<span class="kc-badge">'+k.dans.length+'段</span>';
+  if(k.caution) badges+='<span class="kc-badge" style="background:var(--shu-bg);color:var(--shu);border-color:var(--shu-l);">△注意</span>';
+  var html='<div class="'+cls+'" onclick="pickKata(\''+name+'\')">'
+    +'<div class="kc-top"><span class="kc-name">'+esc(name)+'</span><span class="kc-badges">'+badges+'</span></div>'
+    +'<div class="kc-desc">'+esc(k.desc)+'　<span style="color:var(--myth);">'+esc(k.good)+'</span></div>'
+    +'<div class="kc-roles">'+k.roles.map(function(r){return '<span class="kc-role">'+(ROLE_ICON[r.key]||'👤')+' '+esc(r.label)+'</span>';}).join('')+'</div>';
+  if(k.caution) html+='<div style="font-size:10.5px;color:var(--shu);margin-top:7px;line-height:1.6;">'+esc(k.caution)+'</div>';
+  html+='</div>';
+  return html;
+}
+function renderKataGrid(){
+  var g=document.getElementById('kataGrid');
+  var html='<div class="works-label">🌍 世界共通の型</div>';
+  Object.keys(KATAS_UNIVERSAL).forEach(function(name){ html+=kataCardHtml(name); });
+  html+='<div class="works-label" style="margin-top:14px;">🔎 推理小説の型</div>';
+  Object.keys(KATAS_MYSTERY).forEach(function(name){ html+=kataCardHtml(name); });
+  html+='<div class="works-label" style="margin-top:14px;">💞 恋愛小説の型</div>';
+  Object.keys(KATAS_ROMANCE).forEach(function(name){ html+=kataCardHtml(name); });
+  g.innerHTML=html;
+}
+function pickKata(name){
+  if(selKata!==name){ castTable=null;solutionTable=null;clueTable=null;trickTable=null;relationTable=null;rulesTable=null;kosei=null;honmon=[]; }
+  selKata=name; renderKataGrid(); document.getElementById('p2Next').disabled=false;
+}
+
+// ══════ P3 肉付け設定 ══════
+function chipRow(id,opts,cur,fn){
+  var el=document.getElementById(id);
+  el.innerHTML=opts.map(function(o){
+    return '<button class="chip'+(o===cur?' sel':'')+'" onclick="'+fn+'(\''+o.replace(/'/g,"\\'")+'\')">'+esc(o)+'</button>';
+  }).join('');
+}
+function renderP3(){
+  document.getElementById('heroName').value=heroName;
+  chipRow('rowGender',GENDER_OPTS,heroGender,'setGender');
+  chipRow('rowBeing',BEING_OPTS,heroBeing,'setBeing');
+  chipRow('rowEra',ERA_OPTS,era,'setEra');
+  chipRow('rowPlace',PLACE_OPTS,place,'setPlace');
+  chipRow('rowLength',LENGTH_OPTS,length,'setLength');
+  chipRow('rowTone',TONE_OPTS,tone,'setTone');
+  document.getElementById('eraFreeBox').style.display=era==='自由指定'?'block':'none';
+}
+function setGender(v){ heroGender=v; renderP3(); }
+function setBeing(v){ heroBeing=v; renderP3(); }
+function setEra(v){ era=v; renderP3(); }
+function setPlace(v){ place=v; renderP3(); }
+function setLength(v){ length=v; renderP3(); }
+function setTone(v){ tone=v; renderP3(); }
+function goP4(){
+  heroName=document.getElementById('heroName').value.trim();
+  castTable=null;solutionTable=null;clueTable=null;trickTable=null;relationTable=null;
+  document.getElementById('castList').innerHTML='';
+  document.getElementById('castNote').textContent='';
+  document.getElementById('btnCast').style.display='block';
+  document.getElementById('btnReCast').style.display='none';
+  document.getElementById('p4Next').disabled=true;
+  goP(4);
+}
+
+// ══════ P4 配役表 ══════
+function renderCastList(){
+  var box=document.getElementById('castList');
+  if(!castTable){ box.innerHTML=''; return; }
+  box.innerHTML=castTable.cast.map(function(c,i){
+    return '<div class="cast-card"><div class="cc-top"><span class="cc-ico">'+(ROLE_ICON[c.role_key]||'👤')+'</span><span class="cc-role">'+esc(c.role_label||c.role_key)+'</span></div>'
+      +'<input class="cc-name-in" value="'+esc(c.name)+'" oninput="updateCast('+i+',\'name\',this.value)">'
+      +'<input class="cc-desc-in" value="'+esc(c.description||'')+'" oninput="updateCast('+i+',\'description\',this.value)">'
+      +'</div>';
+  }).join('');
+}
+function updateCast(i,field,val){ castTable.cast[i][field]=val; }
+async function genCast(){
+  if(busy) return; busy=true;
+  var note=document.getElementById('castNote');
+  document.getElementById('btnCast').disabled=true;
+  document.getElementById('btnReCast').disabled=true;
+  note.innerHTML='<span class="spin">⏳</span> 配役設計AIが登場人物を組んでいます…';
+  try{
+    var obj=await callJSONRetry(castPrompt(),SCHEMA_CAST);
+    if(!obj||!obj.cast||!obj.cast.length) throw new Error('配役表の生成に失敗');
+    castTable=obj;
+    renderCastList();
+    note.textContent='名前や設定は自由に書き換えられます。よければ次へ。';
+    document.getElementById('btnCast').style.display='none';
+    document.getElementById('btnReCast').style.display='block';
+    document.getElementById('p4Next').disabled=false;
+  }catch(e){ note.textContent='生成に失敗しました。もう一度お試しください。（'+e.message+'）'; }
+  busy=false;
+  document.getElementById('btnCast').disabled=false;
+  document.getElementById('btnReCast').disabled=false;
+}
+// ══════ P_case 事件の核 ══════
+function resetCasePhase(){
+  var k=ALL_KATAS[selKata];
+  solutionTable=null;clueTable=null;trickTable=null;relationTable=null;
+  var isMystery=k.category==='mystery';
+  var isRomance=k.category==='romance';
+  document.getElementById('caseHdIco').textContent=isRomance?'💞':'🔎';
+  document.getElementById('caseHdTitle').textContent=isRomance?'関係性の核を固める':'事件の核を固める';
+  document.getElementById('psCaseIco').textContent=isRomance?'💞':'🔎';
+  document.getElementById('psCaseLabel').textContent=isRomance?'関係性':'事件';
+  document.getElementById('caseIntro').textContent=isRomance
+    ?'二人の関係の核（惹かれる理由・隔てるもの・転機）を最初に一つだけ確定し、以降のすべての段はこれと矛盾しないように書かれます。生成後は自由に書き換えられます。'
+    :'解決（犯人・動機・手段・機会）を最初に一つだけ確定し、以降のすべての段はこれと矛盾しないように書かれます。生成後は自由に書き換えられます。';
+  document.getElementById('caseCaution').innerHTML=k.caution?('<b style="color:var(--shu);">'+esc(k.caution)+'</b>'):'';
+  document.getElementById('mysterySections').style.display=isMystery?'block':'none';
+  document.getElementById('romanceSections').style.display=isRomance?'block':'none';
+
+  document.getElementById('solutionBox').innerHTML='';
+  document.getElementById('solutionNote').textContent='';
+  document.getElementById('btnSolution').style.display='block';
+  document.getElementById('btnReSolution').style.display='none';
+  document.getElementById('trickSection').style.display=k.needsTrick?'block':'none';
+  document.getElementById('trickBox').innerHTML='';
+  document.getElementById('trickNote').textContent='';
+  document.getElementById('btnTrick').style.display='block';
+  document.getElementById('btnReTrick').style.display='none';
+  document.getElementById('clueSection').style.display='none';
+  document.getElementById('clueBox').innerHTML='';
+  document.getElementById('clueNote').textContent='';
+  document.getElementById('btnClue').style.display='block';
+  document.getElementById('btnReClue').style.display='none';
+
+  document.getElementById('relationBox').innerHTML='';
+  document.getElementById('relationNote').textContent='';
+  document.getElementById('btnRelation').style.display='block';
+  document.getElementById('btnReRelation').style.display='none';
+
+  document.getElementById('caseNext').disabled=true;
+}
+function renderSolutionBox(){
+  var box=document.getElementById('solutionBox');
+  if(!solutionTable){ box.innerHTML=''; return; }
+  box.innerHTML='<div class="cast-card">'
+    +'<div class="rule-cat">犯人役：'+esc(findRoleName('culprit')||'（配役表未設定）')+'</div>'
+    +'<div class="rule-cat" style="margin-top:6px;">動機</div><input class="rule-detail-in" value="'+esc(solutionTable.motive)+'" oninput="solutionTable.motive=this.value">'
+    +'<div class="rule-cat" style="margin-top:6px;">手段</div><input class="rule-detail-in" value="'+esc(solutionTable.method)+'" oninput="solutionTable.method=this.value">'
+    +'<div class="rule-cat" style="margin-top:6px;">機会</div><input class="rule-detail-in" value="'+esc(solutionTable.opportunity)+'" oninput="solutionTable.opportunity=this.value">'
+    +'<div class="rule-cat" style="margin-top:6px;">概要</div><input class="rule-detail-in" value="'+esc(solutionTable.summary)+'" oninput="solutionTable.summary=this.value">'
+    +'</div>';
+}
+async function genSolution(){
+  if(busy) return; busy=true;
+  var note=document.getElementById('solutionNote');
+  document.getElementById('btnSolution').disabled=true; document.getElementById('btnReSolution').disabled=true;
+  note.innerHTML='<span class="spin">⏳</span> 犯罪設計AIが解決を組んでいます…';
+  try{
+    var obj=await callJSONRetry(solutionPrompt(),SCHEMA_SOLUTION);
+    if(!obj||!obj.motive) throw new Error('解決の生成に失敗');
+    solutionTable=obj;
+    renderSolutionBox();
+    note.textContent='内容は自由に書き換えられます。';
+    document.getElementById('btnSolution').style.display='none';
+    document.getElementById('btnReSolution').style.display='block';
+    var k=ALL_KATAS[selKata];
+    if(!k.needsTrick){ document.getElementById('clueSection').style.display='block'; }
+  }catch(e){ note.textContent='生成に失敗しました。もう一度お試しください。（'+e.message+'）'; }
+  busy=false;
+  document.getElementById('btnSolution').disabled=false; document.getElementById('btnReSolution').disabled=false;
+}
+function renderTrickBox(){
+  var box=document.getElementById('trickBox');
+  if(!trickTable){ box.innerHTML=''; return; }
+  box.innerHTML='<div class="cast-card">'
+    +'<div class="rule-cat">仕掛けの要点</div><input class="rule-detail-in" value="'+esc(trickTable.trick_summary)+'" oninput="trickTable.trick_summary=this.value">'
+    +'<div class="rule-cat" style="margin-top:6px;">機構の詳細</div><input class="rule-detail-in" value="'+esc(trickTable.mechanism)+'" oninput="trickTable.mechanism=this.value">'
+    +'</div>'
+    +trickTable.timeline.map(function(t,i){
+      return '<div class="rule-row"><div class="rule-cat">'+esc(t.time)+'</div><input class="rule-detail-in" value="'+esc(t.event)+'" oninput="trickTable.timeline['+i+'].event=this.value"></div>';
+    }).join('');
+}
+async function genTrick(){
+  if(busy||!solutionTable) return; busy=true;
+  var note=document.getElementById('trickNote');
+  document.getElementById('btnTrick').disabled=true; document.getElementById('btnReTrick').disabled=true;
+  note.innerHTML='<span class="spin">⏳</span> トリック設計AIが機構を組んでいます…';
+  try{
+    var obj=await callJSONRetry(trickPrompt(),SCHEMA_TRICK);
+    if(!obj||!obj.mechanism) throw new Error('トリックの生成に失敗');
+    trickTable=obj;
+    renderTrickBox();
+    note.textContent='内容は自由に書き換えられます。';
+    document.getElementById('btnTrick').style.display='none';
+    document.getElementById('btnReTrick').style.display='block';
+    document.getElementById('clueSection').style.display='block';
+  }catch(e){ note.textContent='生成に失敗しました。もう一度お試しください。（'+e.message+'）'; }
+  busy=false;
+  document.getElementById('btnTrick').disabled=false; document.getElementById('btnReTrick').disabled=false;
+}
+function renderClueBox(){
+  var box=document.getElementById('clueBox');
+  if(!clueTable){ box.innerHTML=''; return; }
+  var k=ALL_KATAS[selKata];
+  box.innerHTML=clueTable.clues.map(function(c,i){
+    return '<div class="rule-row"><div class="rule-cat">開示段：<input type="number" min="1" max="'+k.dans.length+'" value="'+(c.reveal_dan||1)+'" style="width:44px;padding:3px 5px;border:1px solid var(--border);border-radius:5px;font-family:inherit;" oninput="clueTable.clues['+i+'].reveal_dan=parseInt(this.value,10)||1"></div>'
+      +'<input class="rule-detail-in" value="'+esc(c.description)+'" oninput="clueTable.clues['+i+'].description=this.value">'
+      +'</div>';
+  }).join('');
+}
+async function genClue(){
+  if(busy||!solutionTable) return; busy=true;
+  var note=document.getElementById('clueNote');
+  document.getElementById('btnClue').disabled=true; document.getElementById('btnReClue').disabled=true;
+  note.innerHTML='<span class="spin">⏳</span> 手がかり設計AIが計画を組んでいます…';
+  try{
+    var obj=await callJSONRetry(cluePrompt(),SCHEMA_CLUES);
+    if(!obj||!obj.clues||!obj.clues.length) throw new Error('手がかり計画の生成に失敗');
+    clueTable=obj;
+    renderClueBox();
+    note.textContent='内容・開示段は自由に書き換えられます。よければ次へ。';
+    document.getElementById('btnClue').style.display='none';
+    document.getElementById('btnReClue').style.display='block';
+    document.getElementById('caseNext').disabled=false;
+  }catch(e){ note.textContent='生成に失敗しました。もう一度お試しください。（'+e.message+'）'; }
+  busy=false;
+  document.getElementById('btnClue').disabled=false; document.getElementById('btnReClue').disabled=false;
+}
+function renderRelationBox(){
+  var box=document.getElementById('relationBox');
+  if(!relationTable){ box.innerHTML=''; return; }
+  box.innerHTML='<div class="cast-card">'
+    +'<div class="rule-cat">惹かれる理由</div><input class="rule-detail-in" value="'+esc(relationTable.attraction)+'" oninput="relationTable.attraction=this.value">'
+    +'<div class="rule-cat" style="margin-top:6px;">二人を隔てるもの</div><input class="rule-detail-in" value="'+esc(relationTable.obstacle)+'" oninput="relationTable.obstacle=this.value">'
+    +'<div class="rule-cat" style="margin-top:6px;">転機となる出来事</div><input class="rule-detail-in" value="'+esc(relationTable.turning_point)+'" oninput="relationTable.turning_point=this.value">'
+    +'<div class="rule-cat" style="margin-top:6px;">結末の方向性</div><input class="rule-detail-in" value="'+esc(relationTable.ending_note||'')+'" oninput="relationTable.ending_note=this.value">'
+    +'</div>';
+}
+async function genRelation(){
+  if(busy) return; busy=true;
+  var note=document.getElementById('relationNote');
+  document.getElementById('btnRelation').disabled=true; document.getElementById('btnReRelation').disabled=true;
+  note.innerHTML='<span class="spin">⏳</span> 関係性設計AIが核を組んでいます…';
+  try{
+    var obj=await callJSONRetry(relationPrompt(),SCHEMA_RELATION);
+    if(!obj||!obj.attraction) throw new Error('関係性の核の生成に失敗');
+    relationTable=obj;
+    renderRelationBox();
+    note.textContent='内容は自由に書き換えられます。よければ次へ。';
+    document.getElementById('btnRelation').style.display='none';
+    document.getElementById('btnReRelation').style.display='block';
+    document.getElementById('caseNext').disabled=false;
+  }catch(e){ note.textContent='生成に失敗しました。もう一度お試しください。（'+e.message+'）'; }
+  busy=false;
+  document.getElementById('btnRelation').disabled=false; document.getElementById('btnReRelation').disabled=false;
+}
+function finishCase(){ hideCaseGuard(); goP5(); }
+function hideCaseGuard(){ document.getElementById('pCase').classList.remove('show'); document.getElementById('psCase').classList.add('done'); document.getElementById('psCase').classList.remove('active'); }
+
+function goP5(){
+  rulesTable=null;
+  document.getElementById('rulesList').innerHTML='';
+  document.getElementById('rulesNote').textContent='';
+  document.getElementById('btnRules').style.display='block';
+  document.getElementById('btnReRules').style.display='none';
+  document.getElementById('p5Next').disabled=true;
+  goP(5);
+}
+
+// ══════ P5 世界観ルール ══════
+function renderRulesList(){
+  var box=document.getElementById('rulesList');
+  if(!rulesTable){ box.innerHTML=''; return; }
+  var html='<div class="summary-box"><textarea oninput="updateSummary(this.value)">'+esc(rulesTable.summary)+'</textarea></div>';
+  html+=rulesTable.worldbuild.map(function(w,i){
+    return '<div class="rule-row"><div class="rule-cat">'+esc(w.category)+'</div><input class="rule-detail-in" value="'+esc(w.detail)+'" oninput="updateRule('+i+',this.value)"></div>';
+  }).join('');
+  box.innerHTML=html;
+}
+function updateSummary(v){ rulesTable.summary=v; }
+function updateRule(i,v){ rulesTable.worldbuild[i].detail=v; }
+async function genRules(){
+  if(busy) return; busy=true;
+  var note=document.getElementById('rulesNote');
+  document.getElementById('btnRules').disabled=true;
+  document.getElementById('btnReRules').disabled=true;
+  note.innerHTML='<span class="spin">⏳</span> 世界観設計AIが設定資料を組んでいます…';
+  try{
+    var obj=await callJSONRetry(rulesPrompt(),SCHEMA_RULES);
+    if(!obj||!obj.worldbuild||!obj.worldbuild.length) throw new Error('世界観ルールの生成に失敗');
+    rulesTable=obj;
+    renderRulesList();
+    note.textContent='内容は自由に書き換えられます。よければ次へ。';
+    document.getElementById('btnRules').style.display='none';
+    document.getElementById('btnReRules').style.display='block';
+    document.getElementById('p5Next').disabled=false;
+  }catch(e){ note.textContent='生成に失敗しました。もう一度お試しください。（'+e.message+'）'; }
+  busy=false;
+  document.getElementById('btnRules').disabled=false;
+  document.getElementById('btnReRules').disabled=false;
+}
+function goP6(){
+  kosei=null;honmon=[];
+  document.getElementById('koseiList').innerHTML='';
+  document.getElementById('progNote').textContent='';
+  document.getElementById('btnKosei').style.display='block';
+  document.getElementById('btnHonmon').style.display='none';
+  document.getElementById('btnReKosei').style.display='none';
+  document.getElementById('p6Next').disabled=true;
+  goP(6);
+}
+
+// ══════ P6 生成 ══════
+function renderKosei(withStatus){
+  var list=document.getElementById('koseiList');
+  if(!kosei){ list.innerHTML=''; return; }
+  list.innerHTML='<div style="font-family:\'Yuji Syuku\',serif;font-size:16px;margin-bottom:9px;">『'+esc(kosei.title)+'』</div>'
+    +kosei.dans.map(function(d,i){
+      var st='';
+      if(withStatus){ st=honmon[i]?'✅':(i===honmon.length&&busy?'<span class="spin">⏳</span>':'・'); }
+      return '<div class="kosei-item"><span class="ki-no">'+(i+1)+'段</span><div class="ki-body"><div class="ki-title">'+esc(d.title)+'</div><div class="ki-goal">'+esc(d.goal)+'</div></div><span class="ki-st">'+st+'</span></div>';
+    }).join('');
+}
+async function genKosei(){
+  if(busy) return; busy=true;
+  var note=document.getElementById('progNote');
+  document.getElementById('btnKosei').disabled=true;
+  document.getElementById('btnReKosei').disabled=true;
+  note.innerHTML='<span class="spin">⏳</span> 構成作家AIが構成を組んでいます…';
+  try{
+    var obj=await callJSONRetry(koseiPrompt(),SCHEMA_KOSEI);
+    if(!obj||!obj.dans||!obj.dans.length) throw new Error('構成の生成に失敗');
+    kosei=obj; honmon=[];
+    renderKosei(false);
+    note.textContent='構成ができました。よければ本文へ、気に入らなければ組み直しを。';
+    document.getElementById('btnKosei').style.display='none';
+    document.getElementById('btnHonmon').style.display='block';
+    document.getElementById('btnReKosei').style.display='block';
+    document.getElementById('p6Next').disabled=true;
+  }catch(e){ note.textContent='生成に失敗しました。もう一度お試しください。（'+e.message+'）'; }
+  busy=false;
+  document.getElementById('btnKosei').disabled=false;
+  document.getElementById('btnReKosei').disabled=false;
+}
+async function genHonmon(){
+  if(busy||!kosei) return; busy=true;
+  var note=document.getElementById('progNote');
+  document.getElementById('btnHonmon').disabled=true;
+  document.getElementById('btnReKosei').disabled=true;
+  honmon=[];
+  try{
+    for(var i=0;i<kosei.dans.length;i++){
+      renderKosei(true);
+      note.innerHTML='<span class="spin">⏳</span> 第'+(i+1)+'段「'+esc(kosei.dans[i].title)+'」を執筆中…（'+(i+1)+'/'+kosei.dans.length+'）';
+      var obj=await callJSONRetry(danPrompt(i),SCHEMA_SOLO,'body',150);
+      if(!obj||!obj.body) throw new Error('第'+(i+1)+'段の執筆に失敗');
+      honmon.push(obj);
+    }
+    renderKosei(true);
+    note.textContent='書き上がりました。完成稿をご覧ください。';
+    document.getElementById('p6Next').disabled=false;
+    renderScript();
+  }catch(e){
+    renderKosei(true);
+    note.textContent=e.message+'。途中まで書けています。もう一度「本文を書き下ろす」で最初から、または完成稿画面で途中分を確認できます。';
+    if(honmon.length){ document.getElementById('p6Next').disabled=false; renderScript(); }
+  }
+  busy=false;
+  document.getElementById('btnHonmon').disabled=false;
+  document.getElementById('btnReKosei').disabled=false;
+}
+function goP7(){ renderScript(); goP(7); }
+
+// ══════ P7 完成稿 ══════
+function renderScript(){
+  var v=document.getElementById('scriptView');
+  var title=(kosei&&kosei.title)||'物語';
+  document.getElementById('outTitle').textContent='『'+title+'』';
+  if(vertical){
+    var cols='<span class="vtitle-col">'+esc(title)+'</span>';
+    honmon.forEach(function(d){
+      cols+='<span class="vd-hashira">'+esc(d.dan_title||'')+'</span>';
+      cols+='<span class="vd-body">'+esc(d.body||'')+'</span>';
+    });
+    v.innerHTML='<div class="vpaper"><div class="vinner">'+cols+'</div></div>'
+      +'<div style="font-size:10px;color:var(--muted);margin-top:6px;text-align:center;">← 横にスクロールして読み進めます（右が冒頭）</div>';
+  }else{
+    v.innerHTML=honmon.map(function(d){
+      return '<div class="prose-card"><div class="pc-title">'+esc(d.dan_title||'')+'</div><div class="pc-body">'+esc(d.body||'')+'</div></div>';
+    }).join('')||'<div class="works-empty">まだ本文がありません。</div>';
+  }
+  renderRef();
+}
+function toggleVertical(){ vertical=!vertical; renderScript(); }
+function renderRef(){
+  var box=document.getElementById('refBox');
+  var html='<div class="rb-t">🗂 設定資料</div>';
+  if(castTable){
+    html+='<div class="rb-sec"><b>配役表</b><br>'+castTable.cast.map(function(c){return '・'+(c.role_label||c.role_key)+'＝'+esc(c.name)+'：'+esc(c.description||'');}).join('<br>')+'</div>';
+  }
+  if(rulesTable){
+    html+='<div class="rb-sec"><b>世界観ルール</b><br>'+esc(rulesTable.summary)+'<br>'+rulesTable.worldbuild.map(function(w){return '・'+esc(w.category)+'：'+esc(w.detail);}).join('<br>')+'</div>';
+  }
+  if(solutionTable){
+    html+='<div class="rb-sec"><b>🔒 事件の核（内部設定・ネタバレ）</b><br>犯人：'+esc(findRoleName('culprit'))+'<br>動機：'+esc(solutionTable.motive)+'<br>手段：'+esc(solutionTable.method)+'<br>機会：'+esc(solutionTable.opportunity)+'</div>';
+  }
+  if(trickTable){
+    html+='<div class="rb-sec"><b>🔒 トリック機構</b><br>'+esc(trickTable.mechanism)+'</div>';
+  }
+  if(clueTable){
+    html+='<div class="rb-sec"><b>手がかり計画</b><br>'+clueTable.clues.map(function(c){return '第'+c.reveal_dan+'段：'+esc(c.description);}).join('<br>')+'</div>';
+  }
+  if(relationTable){
+    html+='<div class="rb-sec"><b>💞 関係性の核</b><br>惹かれる理由：'+esc(relationTable.attraction)+'<br>隔てるもの：'+esc(relationTable.obstacle)+'<br>転機：'+esc(relationTable.turning_point)+(relationTable.ending_note?'<br>結末の方向性：'+esc(relationTable.ending_note):'')+'</div>';
+  }
+  box.innerHTML=html;
+}
+function toggleRef(){ var b=document.getElementById('refBox'); b.style.display=b.style.display==='none'||!b.style.display?'block':'none'; }
+
+// ── 出力 ──
+function scriptText(){
+  var title=(kosei&&kosei.title)||'物語';
+  var out='『'+title+'』\n骨格：'+selKata+'／時代：'+era+'／場所：'+place+'／尺：'+length+'／トーン：'+tone+'\n\n';
+  honmon.forEach(function(d,i){ out+='◆ 第'+(i+1)+'段 '+(d.dan_title||'')+'\n'+(d.body||'')+'\n\n'; });
+  return out;
+}
+function copyText(t,label){
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(t).then(function(){ alert(label+'をコピーしました。'); },function(){ fallbackCopy(t,label); });
+  }else fallbackCopy(t,label);
+}
+function fallbackCopy(t,label){
+  var ta=document.createElement('textarea'); ta.value=t; document.body.appendChild(ta); ta.select();
+  try{ document.execCommand('copy'); alert(label+'をコピーしました。'); }catch(e){ alert('コピーに失敗しました。'); }
+  document.body.removeChild(ta);
+}
+function copyAll(){ copyText(scriptText(),'物語全文'); }
+
+// ── 保存 ──
+async function saveWork(){
+  if(!cu||!window.__fw){ alert('ログインが必要です。'); return; }
+  try{
+    var fw=window.__fw;
+    var id=workId||('w'+Date.now());
+    var data={
+      title:(kosei&&kosei.title)||'（無題）',
+      selKata:selKata,heroName:heroName,heroGender:heroGender,heroBeing:heroBeing,
+      era:era,place:place,length:length,tone:tone,
+      castTable:castTable,rulesTable:rulesTable,kosei:kosei,honmon:honmon,
+      solutionTable:solutionTable,clueTable:clueTable,trickTable:trickTable,relationTable:relationTable,
+      updatedAt:fw.serverTimestamp()
+    };
+    if(!workId) data.createdAt=fw.serverTimestamp();
+    await fw.setDoc(fw.doc(fw.db,'myth_engine/'+cu.uid+'/works/'+id),data,{merge:true});
+    workId=id;
+    alert('保存しました。');
+  }catch(e){ alert('保存に失敗しました：'+e.message); }
+}
+
+// 起動
+initAuth();
+renderKataGrid();
+renderP3();
+</script>
+
+<script type="module">
+import{initializeApp}from'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import{getAuth,signInWithEmailAndPassword,signOut,onAuthStateChanged}from'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+import{getFirestore,collection,doc,setDoc,getDoc,getDocs,orderBy,query,serverTimestamp}from'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+const cfg={apiKey:"AIzaSyCVk2miG5TK1ffTofXLh0hHgeSbOvmIgZ8",authDomain:"kensetsu-nippo-842a2.firebaseapp.com",projectId:"kensetsu-nippo-842a2",storageBucket:"kensetsu-nippo-842a2.firebasestorage.app",messagingSenderId:"702880974315",appId:"1:702880974315:web:985321dc9180046629c5ae"};
+const app=initializeApp(cfg);const auth=getAuth(app);const db=getFirestore(app);
+window.__fw={auth,db,signInWithEmailAndPassword,signOut,onAuthStateChanged,collection,doc,setDoc,getDoc,getDocs,orderBy,query,serverTimestamp};
+window.dispatchEvent(new Event('fbReady'));
+</script>
+</body>
+</html>
